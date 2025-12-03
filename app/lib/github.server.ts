@@ -4,6 +4,10 @@ import { config } from "~/config.server";
 
 export const octokit = new Octokit({
   auth: config.github.token,
+  request: {
+    // Disable caching to ensure fresh data on every request
+    cache: "no-store",
+  },
 });
 
 // Parse GitHub repo string into owner and repo
@@ -78,6 +82,70 @@ export async function getPRFiles(
     }));
   } catch (error) {
     console.error("Error fetching PR files:", error);
+    return [];
+  }
+}
+
+// Get open PRs with SQL files
+export async function getOpenPRsWithSQL(): Promise<
+  Array<{
+    prNumber: number;
+    title: string;
+    url: string;
+    author: string;
+    createdAt: string;
+    sqlFiles: Array<{ filename: string; status: string }>;
+  }>
+> {
+  try {
+    const { owner, repo } = parseRepoString(config.github.repo);
+    const { data: prs } = await octokit.pulls.list({
+      owner,
+      repo,
+      state: "open",
+      sort: "updated",
+      direction: "desc",
+      per_page: 100, // Get more PRs to ensure we don't miss any
+    });
+
+    const sqlFolder = config.github.sqlFolder;
+    const prsWithSQL = [];
+
+    for (const pr of prs) {
+      const files = await getPRFiles(pr.number);
+
+      // Filter for SQL files in specified folder (or entire repo if folder not set)
+      const sqlFiles = files.filter((f) => {
+        const isSqlFile = f.filename.endsWith(".sql") && f.status !== "removed";
+        if (!isSqlFile) return false;
+
+        // If folder is specified, only include files in that folder
+        if (sqlFolder) {
+          return f.filename.startsWith(sqlFolder);
+        }
+
+        // No folder restriction - include all SQL files
+        return true;
+      });
+
+      if (sqlFiles.length > 0) {
+        prsWithSQL.push({
+          prNumber: pr.number,
+          title: pr.title,
+          url: pr.html_url,
+          author: pr.user?.login || "unknown",
+          createdAt: pr.created_at,
+          sqlFiles,
+        });
+      }
+    }
+
+    console.log(
+      `[OpenPRs] Found ${prsWithSQL.length} open PR(s) with SQL files`
+    );
+    return prsWithSQL;
+  } catch (error) {
+    console.error("[OpenPRs] Error fetching open PRs with SQL:", error);
     return [];
   }
 }

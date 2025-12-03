@@ -9,6 +9,7 @@ import {
 } from "~/lib/db.server";
 import type { ApprovedScript } from "~/lib/types";
 import { getUserFromSession } from "~/lib/auth.server";
+import { getOpenPRsWithSQL } from "~/lib/github.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   // Require authentication
@@ -95,11 +96,36 @@ export async function loader({ request }: LoaderFunctionArgs) {
     (s) => s.workflowState === "completed"
   );
 
-  return json({ pending, readyForProd, completed, user });
+  // Fetch open PRs with SQL files (for "In Review" column)
+  // This is fetched fresh on every loader call (including auto-refresh)
+  let openPRs: Array<{
+    prNumber: number;
+    title: string;
+    url: string;
+    author: string;
+    createdAt: string;
+    sqlFiles: Array<{ filename: string; status: string }>;
+  }> = [];
+  try {
+    openPRs = await getOpenPRsWithSQL();
+  } catch (error) {
+    console.error("[Dashboard] Error fetching open PRs:", error);
+    // Continue with empty array if PR fetch fails
+  }
+
+  return json(
+    { pending, readyForProd, completed, openPRs, user },
+    {
+      headers: {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "X-Content-Type-Options": "nosniff",
+      },
+    }
+  );
 }
 
 export default function Index() {
-  const { pending, readyForProd, completed, user } =
+  const { pending, readyForProd, completed, openPRs, user } =
     useLoaderData<typeof loader>();
   const revalidator = useRevalidator();
 
@@ -116,68 +142,247 @@ export default function Index() {
 
   return (
     <div>
-      <div className="mb-8 flex justify-between items-start">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <h2 className="text-2xl font-bold m-0">Approved SQL Scripts</h2>
-          </div>
-          <p className="text-gray-500">
-            All scripts must be executed in staging first, then can be promoted
-            to production. Add{" "}
-            <code className="bg-gray-100 px-1 rounded">-- DirectProd</code> in
-            script comments to bypass staging requirement.
-          </p>
-        </div>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold mb-2">Approved SQL Scripts</h2>
+        <p className="text-gray-500 text-sm">
+          All scripts must be executed in staging first, then can be promoted to
+          production. Add{" "}
+          <code className="bg-gray-100 px-1 rounded">-- DirectProd</code> in
+          script comments to bypass staging requirement.
+        </p>
       </div>
 
-      {pending.length > 0 && (
-        <div className="mb-8">
-          <h3 className="text-xl font-semibold mb-4 text-amber-500">
-            ⏳ Pending Staging Execution ({pending.length})
-          </h3>
-          <div>
-            {pending.map((script) => (
-              <ScriptCard key={script.id} script={script} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {readyForProd.length > 0 && (
-        <div className="mb-8">
-          <h3 className="text-xl font-semibold mb-4 text-blue-500">
-            ✅ Ready for Production ({readyForProd.length})
-          </h3>
-          <div>
-            {readyForProd.map((script) => (
-              <ScriptCard key={script.id} script={script} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {completed.length > 0 && (
-        <div className="mb-8">
-          <h3 className="text-xl font-semibold mb-4 text-green-500">
-            ✓ Completed ({completed.length})
-          </h3>
-          <div>
-            {completed.map((script) => (
-              <ScriptCard key={script.id} script={script} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {totalScripts === 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-4">
+      {totalScripts === 0 && openPRs.length === 0 ? (
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
           <p className="text-gray-500">No scripts available</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* In Review Column */}
+          <div className="bg-gray-50 rounded-lg p-4 flex flex-col max-h-[calc(100vh-250px)]">
+            <div className="flex items-center gap-2 mb-4 flex-shrink-0">
+              <span className="text-purple-500 text-xl">🔍</span>
+              <h3 className="text-lg font-semibold text-gray-800">In Review</h3>
+              <span className="bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-1 rounded-full">
+                {openPRs.length}
+              </span>
+            </div>
+            <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-1">
+              {openPRs.length > 0 ? (
+                openPRs.map((pr) => <PRCard key={pr.prNumber} pr={pr} />)
+              ) : (
+                <div className="text-gray-400 text-sm text-center py-8">
+                  No open PRs
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Pending Staging Column */}
+          <div className="bg-gray-50 rounded-lg p-4 flex flex-col max-h-[calc(100vh-250px)]">
+            <div className="flex items-center gap-2 mb-4 flex-shrink-0">
+              <span className="text-amber-500 text-xl">⏳</span>
+              <h3 className="text-lg font-semibold text-gray-800">
+                Pending Staging
+              </h3>
+              <span className="bg-amber-100 text-amber-800 text-xs font-semibold px-2 py-1 rounded-full">
+                {pending.length}
+              </span>
+            </div>
+            <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-1">
+              {pending.length > 0 ? (
+                pending.map((script) => (
+                  <KanbanCard key={script.id} script={script} />
+                ))
+              ) : (
+                <div className="text-gray-400 text-sm text-center py-8">
+                  No scripts pending
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Ready for Production Column */}
+          <div className="bg-gray-50 rounded-lg p-4 flex flex-col max-h-[calc(100vh-250px)]">
+            <div className="flex items-center gap-2 mb-4 flex-shrink-0">
+              <span className="text-blue-500 text-xl">✅</span>
+              <h3 className="text-lg font-semibold text-gray-800">
+                Ready for Prod
+              </h3>
+              <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full">
+                {readyForProd.length}
+              </span>
+            </div>
+            <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-1">
+              {readyForProd.length > 0 ? (
+                readyForProd.map((script) => (
+                  <KanbanCard key={script.id} script={script} />
+                ))
+              ) : (
+                <div className="text-gray-400 text-sm text-center py-8">
+                  No scripts ready
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Completed Column */}
+          <div className="bg-gray-50 rounded-lg p-4 flex flex-col max-h-[calc(100vh-250px)]">
+            <div className="flex items-center gap-2 mb-4 flex-shrink-0">
+              <span className="text-green-500 text-xl">✓</span>
+              <h3 className="text-lg font-semibold text-gray-800">Completed</h3>
+              <span className="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded-full">
+                {completed.length}
+              </span>
+            </div>
+            <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-1">
+              {completed.length > 0 ? (
+                completed.map((script) => (
+                  <KanbanCard key={script.id} script={script} />
+                ))
+              ) : (
+                <div className="text-gray-400 text-sm text-center py-8">
+                  No scripts completed
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
+// PR Card Component (for In Review column)
+function PRCard({ pr }: { pr: any }) {
+  // Format relative time
+  const formatRelativeTime = (date: Date | string | null) => {
+    if (!date) return null;
+    const d = new Date(date);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return d.toLocaleDateString();
+  };
+
+  return (
+    <a
+      href={pr.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md hover:border-purple-300 transition-all cursor-pointer no-underline"
+    >
+      <h4 className="text-sm font-semibold text-gray-800 mb-2 line-clamp-2">
+        {pr.title}
+      </h4>
+
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        <span className="inline-block px-2 py-0.5 rounded text-xs font-semibold bg-purple-100 text-purple-900">
+          PR #{pr.prNumber}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between text-xs text-gray-500">
+        <span>👤 {pr.author}</span>
+        {pr.createdAt && <span>📅 {formatRelativeTime(pr.createdAt)}</span>}
+      </div>
+    </a>
+  );
+}
+
+// Compact Kanban Card Component
+function KanbanCard({ script }: { script: any }) {
+  const approvers = Array.isArray(script.approvers)
+    ? script.approvers
+    : script.approvers
+    ? JSON.parse(script.approvers as any)
+    : [];
+
+  // Format relative time
+  const formatRelativeTime = (date: Date | string | null) => {
+    if (!date) return null;
+    const d = new Date(date);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return d.toLocaleDateString();
+  };
+
+  // Get primary status badge
+  const getPrimaryStatus = () => {
+    if (script.production_executed) {
+      return { text: "✓ Production", color: "bg-green-100 text-green-900" };
+    }
+    if (script.staging_executed) {
+      return { text: "✓ Staging", color: "bg-green-100 text-green-900" };
+    }
+    return { text: "⏳ Pending", color: "bg-yellow-100 text-yellow-900" };
+  };
+
+  const primaryStatus = getPrimaryStatus();
+  const hasErrors = script.hasErrors;
+  const executionCount = script.executionCount || 0;
+
+  return (
+    <a
+      href={`/scripts/${script.id}`}
+      className="block bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer no-underline"
+    >
+      <h4 className="text-sm font-semibold text-gray-800 mb-2 truncate">
+        {script.script_name}
+      </h4>
+
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        <span
+          className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${primaryStatus.color}`}
+        >
+          {primaryStatus.text}
+        </span>
+
+        {script.direct_prod && (
+          <span className="inline-block px-2 py-0.5 rounded text-xs font-semibold bg-amber-200 text-amber-900">
+            ⚡ DirectProd
+          </span>
+        )}
+
+        {hasErrors && (
+          <span className="inline-block px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-900">
+            ⚠️ Errors
+          </span>
+        )}
+
+        {executionCount > 0 && (
+          <span className="inline-block px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-700">
+            🔄 {executionCount}x
+          </span>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between text-xs text-gray-500">
+        {script.approved_at && (
+          <span>📅 {formatRelativeTime(script.approved_at)}</span>
+        )}
+        {approvers.length > 0 && <span>👥 {approvers.length}</span>}
+      </div>
+    </a>
+  );
+}
+
+// Full Script Card (kept for potential future use or detail views)
 function ScriptCard({ script }: { script: any }) {
   const approvers = Array.isArray(script.approvers)
     ? script.approvers

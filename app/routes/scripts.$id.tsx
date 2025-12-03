@@ -39,6 +39,12 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
+  // Require authentication
+  const user = await getUserFromSession(request);
+  if (!user) {
+    return json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const scriptId = parseInt(params.id || "0");
   const script = await getScriptById(scriptId);
 
@@ -48,16 +54,11 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
   // Get form data
   const formData = await request.formData();
-  const executedBy = (formData.get("executedBy") as string) || "unknown";
   const targetDatabase =
     (formData.get("targetDatabase") as string) || "staging";
 
-  if (!executedBy || executedBy.trim() === "") {
-    return json({
-      success: false,
-      error: "Executed by field is required",
-    });
-  }
+  // Use authenticated user's email or username (always available since user is authenticated)
+  const executedBy = (user.email || user.username || "unknown").trim();
 
   // Enforce staging-first workflow (unless direct_prod flag is set)
   if (targetDatabase === "production") {
@@ -82,7 +83,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
     await logExecution({
       scriptName: script.script_name,
       scriptContent: script.script_content,
-      executedBy: executedBy.trim(),
+      executedBy: executedBy,
       targetDatabase: targetDatabase as "staging" | "production",
       status: result.success ? "success" : "error",
       rowsAffected: result.rowsAffected,
@@ -136,19 +137,11 @@ export default function ScriptDetail() {
   const navigation = useNavigation();
   const revalidator = useRevalidator();
   const [showConfirm, setShowConfirm] = useState(false);
-  const [executedBy, setExecutedBy] = useState("");
   const [targetDatabase, setTargetDatabase] = useState<
     "staging" | "production"
   >("staging");
   const prevNavigationState = useRef<string>(navigation.state);
   const wasSubmitting = useRef<boolean>(false);
-
-  // Auto-fill executedBy with GitHub user if signed in
-  useEffect(() => {
-    if (user && !executedBy) {
-      setExecutedBy(user.email || user.username);
-    }
-  }, [user, executedBy]);
 
   const isExecuting = navigation.state === "submitting";
 
@@ -170,7 +163,6 @@ export default function ScriptDetail() {
     ) {
       wasSubmitting.current = false;
       setShowConfirm(false);
-      setExecutedBy("");
       // Refresh loader data to get updated execution status
       if ("success" in actionData && actionData.success) {
         revalidator.revalidate();
@@ -331,7 +323,6 @@ export default function ScriptDetail() {
             onClick={() => {
               setTargetDatabase("staging");
               setShowConfirm(true);
-              setExecutedBy("");
             }}
             className="btn btn-primary"
             disabled={isExecuting}
@@ -343,7 +334,6 @@ export default function ScriptDetail() {
               onClick={() => {
                 setTargetDatabase("production");
                 setShowConfirm(true);
-                setExecutedBy("");
               }}
               className="btn btn-danger"
               disabled={isExecuting}
@@ -407,7 +397,6 @@ export default function ScriptDetail() {
           className="modal-overlay"
           onClick={() => {
             setShowConfirm(false);
-            setExecutedBy("");
           }}
         >
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -482,56 +471,7 @@ export default function ScriptDetail() {
               </pre>
             </div>
 
-            <Form
-              method="post"
-              onSubmit={(e) => {
-                if (!executedBy.trim()) {
-                  e.preventDefault();
-                  alert("Please enter your name/email for the audit trail");
-                  return false;
-                }
-              }}
-            >
-              <div style={{ marginBottom: "1rem" }}>
-                <label
-                  htmlFor="executedBy"
-                  style={{
-                    display: "block",
-                    fontSize: "0.875rem",
-                    fontWeight: "600",
-                    marginBottom: "0.5rem",
-                    color: "#374151",
-                  }}
-                >
-                  Your Name / Email (required for audit trail):
-                </label>
-                <input
-                  type="text"
-                  id="executedBy"
-                  name="executedBy"
-                  value={executedBy}
-                  onChange={(e) => setExecutedBy(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && executedBy.trim()) {
-                      e.preventDefault();
-                      const form = e.currentTarget.closest("form");
-                      if (form) {
-                        form.requestSubmit();
-                      }
-                    }
-                  }}
-                  required
-                  placeholder="e.g., john@example.com or John Doe"
-                  style={{
-                    width: "100%",
-                    padding: "0.5rem",
-                    border: "1px solid #d1d5db",
-                    borderRadius: "0.375rem",
-                    fontSize: "0.875rem",
-                  }}
-                />
-              </div>
-
+            <Form method="post">
               <p
                 style={{
                   marginBottom: "1rem",
@@ -539,7 +479,8 @@ export default function ScriptDetail() {
                   color: "#6b7280",
                 }}
               >
-                This action will be logged in the audit trail with your name.
+                This action will be logged in the audit trail as{" "}
+                <strong>{user?.email || user?.username || "you"}</strong>.
               </p>
 
               <input
@@ -559,7 +500,6 @@ export default function ScriptDetail() {
                   type="button"
                   onClick={() => {
                     setShowConfirm(false);
-                    setExecutedBy("");
                   }}
                   className="btn btn-secondary"
                 >
@@ -572,7 +512,6 @@ export default function ScriptDetail() {
                       ? "btn-danger"
                       : "btn-primary"
                   }`}
-                  disabled={!executedBy.trim()}
                 >
                   Yes, Execute on {targetDatabase}
                 </button>

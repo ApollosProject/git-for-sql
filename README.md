@@ -14,6 +14,8 @@ A peer-reviewed SQL execution tool with GitHub integration and comprehensive aud
 - ✅ **GitHub Webhook Integration** - Auto-sync approved scripts from merged PRs
 - ✅ **Auto-Refresh Dashboard** - Automatically polls for new scripts every 30 seconds
 - ✅ **DirectProd Flag** - Option to bypass staging requirement for specific scripts
+- ✅ **Configurable Folder Watching** - Watch a specific folder in any repo (e.g., `migrations/sql/`)
+- ✅ **GitHub OAuth** - Optional sign-in for user identification and auto-fill
 
 ## Architecture
 
@@ -60,6 +62,12 @@ AUDIT_DB_URL=postgresql://user:password@localhost:5432/audit_db
 GITHUB_TOKEN=ghp_your_token_here
 GITHUB_REPO=org/sql-scripts
 GITHUB_WEBHOOK_SECRET=your_webhook_secret_here
+GITHUB_SQL_FOLDER=sql/  # Optional: folder to watch (e.g., sql/, migrations/sql/, db/). Leave empty to watch entire repo
+
+# GitHub OAuth (optional - for user identification)
+GITHUB_OAUTH_CLIENT_ID=your_oauth_client_id
+GITHUB_OAUTH_CLIENT_SECRET=your_oauth_client_secret
+GITHUB_OAUTH_CALLBACK_URL=http://localhost:3000/auth/github/callback
 
 # Session Configuration
 SESSION_SECRET=your_session_secret_here
@@ -74,6 +82,8 @@ The audit database schema will be automatically created on first run. Ensure you
 
 ### 4. Set Up GitHub Repository
 
+**Option A: Dedicated SQL Scripts Repository**
+
 Create a GitHub repository with a simple flat structure:
 
 ```
@@ -84,6 +94,26 @@ sql-scripts/
 │   └── 003-query-users.sql
 └── README.md
 ```
+
+Set `.env`: `GITHUB_REPO=org/sql-scripts` and `GITHUB_SQL_FOLDER=sql/`
+
+**Option B: Folder in Existing Repository** (e.g., Apollo cluster migrations)
+
+If you have migrations in your main app repo:
+
+```
+my-app-repo/
+├── src/
+├── migrations/
+│   └── sql/
+│       ├── 001-create-tables.sql
+│       └── 002-add-indexes.sql
+└── package.json
+```
+
+Set `.env`: `GITHUB_REPO=org/my-app-repo` and `GITHUB_SQL_FOLDER=migrations/sql/`
+
+The app will only watch and process SQL files in the specified folder.
 
 Each SQL file should include metadata in comments:
 

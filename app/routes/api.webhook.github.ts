@@ -67,17 +67,27 @@ export async function action({ request }: ActionFunctionArgs) {
   console.log(`[Webhook] Found ${files.length} files in PR`);
   console.log(`[Webhook] Files:`, files.map(f => `${f.filename} (${f.status})`));
   
-  // Filter for SQL files (can be in any directory now)
-  const sqlFiles = files.filter(f => 
-    f.filename.endsWith('.sql') &&
-    f.status !== 'removed'
-  );
+  // Filter for SQL files in specified folder (or entire repo if folder not set)
+  const sqlFolder = config.github.sqlFolder;
+  const sqlFiles = files.filter(f => {
+    const isSqlFile = f.filename.endsWith('.sql') && f.status !== 'removed';
+    if (!isSqlFile) return false;
+    
+    // If folder is specified, only include files in that folder
+    if (sqlFolder) {
+      return f.filename.startsWith(sqlFolder);
+    }
+    
+    // No folder restriction - include all SQL files
+    return true;
+  });
 
-  console.log(`[Webhook] Found ${sqlFiles.length} SQL files after filtering`);
+  const folderInfo = sqlFolder ? ` in folder '${sqlFolder}'` : '';
+  console.log(`[Webhook] Found ${sqlFiles.length} SQL file(s)${folderInfo} after filtering`);
   
   if (sqlFiles.length === 0) {
-    console.log('[Webhook] ❌ No SQL files found in PR');
-    return json({ message: "No SQL files found in PR" }, { status: 200 });
+    console.log(`[Webhook] ❌ No SQL files found in PR${folderInfo}`);
+    return json({ message: `No SQL files found in PR${folderInfo}` }, { status: 200 });
   }
 
   // Process each SQL file

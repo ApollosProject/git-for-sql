@@ -5,10 +5,16 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  Form,
 } from "@remix-run/react";
-import type { LinksFunction } from "@remix-run/node";
+import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
+import stylesheet from "./tailwind.css";
+import { getUserFromSession } from "~/lib/auth.server";
 
 export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: stylesheet },
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
   {
     rel: "preconnect",
@@ -21,7 +27,14 @@ export const links: LinksFunction = () => [
   },
 ];
 
+export async function loader({ request }: LoaderFunctionArgs) {
+  const user = await getUserFromSession(request);
+  return json({ user });
+}
+
 export default function App() {
+  const { user } = useLoaderData<typeof loader>();
+
   return (
     <html lang="en">
       <head>
@@ -56,15 +69,23 @@ export default function App() {
             margin-bottom: 2rem;
           }
           
+          header .container > div {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+          
           header h1 {
             font-size: 1.5rem;
             font-weight: 700;
             color: #111827;
+            margin: 0;
           }
           
           header p {
             color: #6b7280;
             font-size: 0.875rem;
+            margin: 0.25rem 0 0 0;
           }
           
           .nav {
@@ -236,12 +257,47 @@ export default function App() {
       <body>
         <header>
           <div className="container">
-            <h1>🔐 Git for SQL</h1>
-            <p>Peer-reviewed SQL execution with audit logging</p>
-            <nav className="nav">
-              <a href="/">Dashboard</a>
-              <a href="/executions">Execution History</a>
-            </nav>
+            <div className="flex justify-between items-center">
+              <div>
+                <h1>🔐 Git for SQL</h1>
+                <p>Peer-reviewed SQL execution with audit logging</p>
+                <nav className="nav">
+                  <a href="/">Dashboard</a>
+                  <a href="/executions">Execution History</a>
+                </nav>
+              </div>
+              <div className="flex items-center gap-3">
+                {user ? (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={user.avatar}
+                        alt={user.username}
+                        className="w-8 h-8 rounded-full border-2 border-gray-200"
+                      />
+                      <span className="text-sm text-gray-700">
+                        {user.name || user.username}
+                      </span>
+                    </div>
+                    <Form method="post" action="/auth/logout">
+                      <button
+                        type="submit"
+                        className="text-sm px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded transition-colors"
+                      >
+                        Sign out
+                      </button>
+                    </Form>
+                  </>
+                ) : (
+                  <a
+                    href="/auth/github"
+                    className="text-sm px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded transition-colors no-underline"
+                  >
+                    Sign in with GitHub
+                  </a>
+                )}
+              </div>
+            </div>
           </div>
         </header>
         <main className="container">

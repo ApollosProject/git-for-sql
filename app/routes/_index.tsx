@@ -1,18 +1,22 @@
-import { json } from "@remix-run/node";
-import { useLoaderData, useFetcher, useRevalidator } from "@remix-run/react";
-import { useEffect, useState } from "react";
-import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
+import { useLoaderData, useRevalidator } from "@remix-run/react";
+import { useEffect } from "react";
+import type { LoaderFunctionArgs } from "@remix-run/node";
 import {
   getApprovedScripts,
   getExistingScriptNames,
   getScriptExecutionHistory,
 } from "~/lib/db.server";
-import { syncScriptsFromGitHub } from "~/lib/github.server";
-import { addApprovedScript } from "~/lib/audit.server";
-import { config } from "~/config.server";
 import type { ApprovedScript } from "~/lib/types";
+import { getUserFromSession } from "~/lib/auth.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
+  // Require authentication
+  const user = await getUserFromSession(request);
+  if (!user) {
+    throw redirect("/login");
+  }
+
   // Load scripts from database
   const scripts = await getApprovedScripts();
 
@@ -91,48 +95,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
     (s) => s.workflowState === "completed"
   );
 
-  return json({ pending, readyForProd, completed });
-}
-
-export async function action({ request }: ActionFunctionArgs) {
-  if (request.method !== "POST") {
-    return json({ error: "Method not allowed" }, { status: 405 });
-  }
-
-  const formData = await request.formData();
-  const action = formData.get("action");
-
-  if (action === "sync") {
-    try {
-      const stats = await syncScriptsFromGitHub(
-        addApprovedScript,
-        getExistingScriptNames,
-        config.minApprovals
-      );
-      return json({
-        success: true,
-        message: `Sync complete: ${stats.synced} synced, ${stats.skipped} skipped, ${stats.errors} errors`,
-        stats,
-      });
-    } catch (error: any) {
-      return json(
-        {
-          success: false,
-          error: error.message || "Sync failed",
-        },
-        { status: 500 }
-      );
-    }
-  }
-
-  return json({ error: "Invalid action" }, { status: 400 });
+  return json({ pending, readyForProd, completed, user });
 }
 
 export default function Index() {
-  const { pending, readyForProd, completed } = useLoaderData<typeof loader>();
-  const fetcher = useFetcher();
+  const { pending, readyForProd, completed, user } =
+    useLoaderData<typeof loader>();
   const revalidator = useRevalidator();
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   const totalScripts = pending.length + readyForProd.length + completed.length;
 
@@ -140,134 +109,30 @@ export default function Index() {
   useEffect(() => {
     const interval = setInterval(() => {
       revalidator.revalidate();
-      setLastRefresh(new Date());
     }, 30000); // 30 seconds
 
     return () => clearInterval(interval);
   }, [revalidator]);
 
-  // Update last refresh time when data changes
-  useEffect(() => {
-    setLastRefresh(new Date());
-  }, [pending.length, readyForProd.length, completed.length]);
-
   return (
     <div>
-      <div
-        style={{
-          marginBottom: "2rem",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "start",
-        }}
-      >
+      <div className="mb-8 flex justify-between items-start">
         <div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              marginBottom: "0.5rem",
-            }}
-          >
-            <h2 style={{ fontSize: "1.5rem", fontWeight: "700", margin: 0 }}>
-              Approved SQL Scripts
-            </h2>
-            {revalidator.state === "idle" && (
-              <span
-                style={{
-                  fontSize: "0.75rem",
-                  color: "#6b7280",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.25rem",
-                }}
-                title={`Auto-refreshes every 30 seconds. Last refreshed: ${lastRefresh.toLocaleTimeString()}`}
-              >
-                <span
-                  style={{
-                    display: "inline-block",
-                    width: "8px",
-                    height: "8px",
-                    borderRadius: "50%",
-                    background: "#10b981",
-                  }}
-                ></span>
-                Auto-refresh
-              </span>
-            )}
-            {revalidator.state === "loading" && (
-              <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>
-                🔄 Refreshing...
-              </span>
-            )}
+          <div className="flex items-center gap-2 mb-2">
+            <h2 className="text-2xl font-bold m-0">Approved SQL Scripts</h2>
           </div>
-          <p style={{ color: "#6b7280" }}>
+          <p className="text-gray-500">
             All scripts must be executed in staging first, then can be promoted
-            to production. Add <code>-- DirectProd</code> in script comments to
-            bypass staging requirement.
+            to production. Add{" "}
+            <code className="bg-gray-100 px-1 rounded">-- DirectProd</code> in
+            script comments to bypass staging requirement.
           </p>
         </div>
-        <fetcher.Form method="post">
-          <input type="hidden" name="action" value="sync" />
-          <button
-            type="submit"
-            className="btn btn-secondary"
-            disabled={fetcher.state === "submitting"}
-            style={{ whiteSpace: "nowrap" }}
-          >
-            {fetcher.state === "submitting"
-              ? "Syncing..."
-              : "🔄 Sync from GitHub"}
-          </button>
-        </fetcher.Form>
       </div>
 
-      {(() => {
-        if (
-          !fetcher.data ||
-          typeof fetcher.data !== "object" ||
-          fetcher.data === null ||
-          !("success" in fetcher.data)
-        ) {
-          return null;
-        }
-        const data = fetcher.data as {
-          success: boolean;
-          message?: string;
-          error?: string;
-        };
-        return (
-          <div
-            className="card"
-            style={{
-              marginBottom: "1rem",
-              backgroundColor: data.success ? "#f0fdf4" : "#fef2f2",
-              border: `1px solid ${data.success ? "#86efac" : "#fca5a5"}`,
-            }}
-          >
-            <p
-              style={{
-                color: data.success ? "#166534" : "#991b1b",
-                margin: 0,
-              }}
-            >
-              {data.message || data.error || ""}
-            </p>
-          </div>
-        );
-      })()}
-
       {pending.length > 0 && (
-        <div style={{ marginBottom: "2rem" }}>
-          <h3
-            style={{
-              fontSize: "1.25rem",
-              fontWeight: "600",
-              marginBottom: "1rem",
-              color: "#f59e0b",
-            }}
-          >
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold mb-4 text-amber-500">
             ⏳ Pending Staging Execution ({pending.length})
           </h3>
           <div>
@@ -279,15 +144,8 @@ export default function Index() {
       )}
 
       {readyForProd.length > 0 && (
-        <div style={{ marginBottom: "2rem" }}>
-          <h3
-            style={{
-              fontSize: "1.25rem",
-              fontWeight: "600",
-              marginBottom: "1rem",
-              color: "#3b82f6",
-            }}
-          >
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold mb-4 text-blue-500">
             ✅ Ready for Production ({readyForProd.length})
           </h3>
           <div>
@@ -299,15 +157,8 @@ export default function Index() {
       )}
 
       {completed.length > 0 && (
-        <div style={{ marginBottom: "2rem" }}>
-          <h3
-            style={{
-              fontSize: "1.25rem",
-              fontWeight: "600",
-              marginBottom: "1rem",
-              color: "#10b981",
-            }}
-          >
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold mb-4 text-green-500">
             ✓ Completed ({completed.length})
           </h3>
           <div>
@@ -319,8 +170,8 @@ export default function Index() {
       )}
 
       {totalScripts === 0 && (
-        <div className="card">
-          <p style={{ color: "#6b7280" }}>No scripts available</p>
+        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-4">
+          <p className="text-gray-500">No scripts available</p>
         </div>
       )}
     </div>
@@ -352,37 +203,15 @@ function ScriptCard({ script }: { script: any }) {
   };
 
   return (
-    <div className="card">
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "start",
-          marginBottom: "1rem",
-        }}
-      >
-        <div style={{ flex: 1 }}>
-          <h4
-            style={{
-              fontSize: "1.125rem",
-              fontWeight: "600",
-              marginBottom: "0.5rem",
-            }}
-          >
-            {script.script_name}
-          </h4>
-          <div
-            style={{
-              display: "flex",
-              gap: "0.5rem",
-              flexWrap: "wrap",
-              marginBottom: "0.5rem",
-            }}
-          >
+    <div className="bg-white border border-gray-200 rounded-lg p-6 mb-4">
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex-1">
+          <h4 className="text-lg font-semibold mb-2">{script.script_name}</h4>
+          <div className="flex gap-2 flex-wrap mb-2">
             {/* Execution Status Badges */}
             {script.staging_executed && (
               <span
-                className="badge badge-success"
+                className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-900"
                 title={
                   script.staging_executed_at
                     ? `Staging executed ${formatRelativeTime(
@@ -396,7 +225,7 @@ function ScriptCard({ script }: { script: any }) {
             )}
             {script.production_executed && (
               <span
-                className="badge badge-success"
+                className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-900"
                 title={
                   script.production_executed_at
                     ? `Production executed ${formatRelativeTime(
@@ -409,17 +238,20 @@ function ScriptCard({ script }: { script: any }) {
               </span>
             )}
             {!script.staging_executed && !script.production_executed && (
-              <span className="badge badge-warning">⏳ Pending Staging</span>
+              <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-900">
+                ⏳ Pending Staging
+              </span>
             )}
             {script.staging_executed && !script.production_executed && (
-              <span className="badge badge-info">✅ Ready for Prod</span>
+              <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-900">
+                ✅ Ready for Prod
+              </span>
             )}
 
             {/* Feature Flags */}
             {script.direct_prod && (
               <span
-                className="badge"
-                style={{ background: "#fbbf24", color: "#78350f" }}
+                className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-amber-200 text-amber-900"
                 title="Can execute directly on production"
               >
                 ⚡ DirectProd
@@ -429,8 +261,7 @@ function ScriptCard({ script }: { script: any }) {
             {/* Approval Info */}
             {approvers.length > 0 && (
               <span
-                className="badge"
-                style={{ background: "#e0e7ff", color: "#3730a3" }}
+                className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-900"
                 title={`Approved by: ${approvers.join(", ")}`}
               >
                 👥 {approvers.length} approver
@@ -441,8 +272,7 @@ function ScriptCard({ script }: { script: any }) {
             {/* Execution Stats */}
             {script.executionCount > 0 && (
               <span
-                className="badge"
-                style={{ background: "#f3f4f6", color: "#374151" }}
+                className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700"
                 title={`Executed ${script.executionCount} time${
                   script.executionCount !== 1 ? "s" : ""
                 }`}
@@ -453,7 +283,10 @@ function ScriptCard({ script }: { script: any }) {
 
             {/* Error Indicator */}
             {script.hasErrors && (
-              <span className="badge badge-error" title="Has execution errors">
+              <span
+                className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-900"
+                title="Has execution errors"
+              >
                 ⚠️ Errors
               </span>
             )}
@@ -461,8 +294,7 @@ function ScriptCard({ script }: { script: any }) {
             {/* Last Execution Info */}
             {script.lastExecutedAt && (
               <span
-                className="badge"
-                style={{ background: "#fef3c7", color: "#78350f" }}
+                className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-900"
                 title={`Last executed ${formatRelativeTime(
                   script.lastExecutedAt
                 )} by ${script.lastExecutedBy}`}
@@ -474,8 +306,7 @@ function ScriptCard({ script }: { script: any }) {
             {/* Approved Date */}
             {script.approved_at && (
               <span
-                className="badge"
-                style={{ background: "#ecfdf5", color: "#065f46" }}
+                className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-900"
                 title={`Approved ${formatRelativeTime(script.approved_at)}`}
               >
                 📅 Approved {formatRelativeTime(script.approved_at)}
@@ -487,47 +318,33 @@ function ScriptCard({ script }: { script: any }) {
               href={script.github_pr_url}
               target="_blank"
               rel="noopener noreferrer"
-              style={{
-                color: "#3b82f6",
-                fontSize: "0.875rem",
-                textDecoration: "none",
-              }}
+              className="text-blue-600 text-sm no-underline hover:underline"
             >
               View PR →
             </a>
           )}
         </div>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <a href={`/scripts/${script.id}`} className="btn btn-primary">
+        <div className="flex gap-2">
+          <a
+            href={`/scripts/${script.id}`}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded transition-colors no-underline"
+          >
             View Details
           </a>
         </div>
       </div>
 
       <details>
-        <summary
-          style={{
-            cursor: "pointer",
-            color: "#6b7280",
-            fontSize: "0.875rem",
-            marginBottom: "0.5rem",
-          }}
-        >
+        <summary className="cursor-pointer text-gray-500 text-sm mb-2">
           Show SQL
         </summary>
-        <pre style={{ marginTop: "0.5rem", fontSize: "0.75rem" }}>
+        <pre className="mt-2 text-xs bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto">
           {script.script_content}
         </pre>
       </details>
 
       {approvers.length > 0 && (
-        <div
-          style={{
-            marginTop: "0.75rem",
-            fontSize: "0.875rem",
-            color: "#6b7280",
-          }}
-        >
+        <div className="mt-3 text-sm text-gray-500">
           <strong>Approved by:</strong> {approvers.join(", ")}
         </div>
       )}

@@ -1,9 +1,16 @@
-import { json } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { getExecutionHistory } from "~/lib/db.server";
+import { getUserFromSession } from "~/lib/auth.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
+  // Require authentication
+  const user = await getUserFromSession(request);
+  if (!user) {
+    throw redirect("/login");
+  }
+
   const url = new URL(request.url);
   const limit = parseInt(url.searchParams.get('limit') || '50');
   

@@ -17,8 +17,15 @@ import {
 import { logExecution } from "~/lib/audit.server";
 import { useState, useEffect, useRef } from "react";
 import type { ExecutionLog } from "~/lib/types";
+import { getUserFromSession } from "~/lib/auth.server";
 
-export async function loader({ params }: LoaderFunctionArgs) {
+export async function loader({ params, request }: LoaderFunctionArgs) {
+  // Require authentication
+  const user = await getUserFromSession(request);
+  if (!user) {
+    throw redirect("/login");
+  }
+
   const scriptId = parseInt(params.id || "0");
   const script = await getScriptById(scriptId);
 
@@ -28,7 +35,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
 
   const history = await getScriptExecutionHistory(script.script_name);
 
-  return json({ script, history });
+  return json({ script, history, user });
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -124,7 +131,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 }
 
 export default function ScriptDetail() {
-  const { script, history } = useLoaderData<typeof loader>();
+  const { script, history, user } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const revalidator = useRevalidator();
@@ -135,6 +142,13 @@ export default function ScriptDetail() {
   >("staging");
   const prevNavigationState = useRef<string>(navigation.state);
   const wasSubmitting = useRef<boolean>(false);
+
+  // Auto-fill executedBy with GitHub user if signed in
+  useEffect(() => {
+    if (user && !executedBy) {
+      setExecutedBy(user.email || user.username);
+    }
+  }, [user, executedBy]);
 
   const isExecuting = navigation.state === "submitting";
 

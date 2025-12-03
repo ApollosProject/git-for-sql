@@ -12,7 +12,13 @@ export const config = {
   github: {
     token: process.env.GITHUB_TOKEN || '',
     repo: process.env.GITHUB_REPO || '',
-    webhookSecret: process.env.GITHUB_WEBHOOK_SECRET || ''
+    webhookSecret: process.env.GITHUB_WEBHOOK_SECRET || '',
+    sqlFolder: process.env.GITHUB_SQL_FOLDER || '', // Empty = watch entire repo
+    oauth: {
+      clientId: process.env.GITHUB_OAUTH_CLIENT_ID || '',
+      clientSecret: process.env.GITHUB_OAUTH_CLIENT_SECRET || '',
+      callbackUrl: process.env.GITHUB_OAUTH_CALLBACK_URL || 'http://localhost:3000/auth/github/callback'
+    }
   },
   minApprovals: parseInt(process.env.MIN_APPROVALS || '2'),
   sessionSecret: process.env.SESSION_SECRET || 'dev-secret-change-in-production'

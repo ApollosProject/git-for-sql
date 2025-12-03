@@ -231,10 +231,20 @@ export async function syncScriptsFromGitHub(
       // Get files changed in the PR
       const files = await getPRFiles(pr.number);
 
-      // Filter for SQL files (typically in sql/ folder)
-      const sqlFiles = files.filter(
-        (f) => f.filename.endsWith(".sql") && f.status !== "removed"
-      );
+      // Filter for SQL files in specified folder (or entire repo if folder not set)
+      const sqlFolder = config.github.sqlFolder;
+      const sqlFiles = files.filter((f) => {
+        const isSqlFile = f.filename.endsWith(".sql") && f.status !== "removed";
+        if (!isSqlFile) return false;
+
+        // If folder is specified, only include files in that folder
+        if (sqlFolder) {
+          return f.filename.startsWith(sqlFolder);
+        }
+
+        // No folder restriction - include all SQL files
+        return true;
+      });
 
       if (sqlFiles.length === 0) {
         stats.skipped++;

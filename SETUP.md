@@ -56,6 +56,12 @@ PROD_DB_URL=postgresql://sqlexec:your_secure_password@localhost:5432/prod_db
 GITHUB_TOKEN=ghp_your_token_here
 GITHUB_REPO=your-org/sql-scripts
 GITHUB_WEBHOOK_SECRET=generate_a_random_secret_here
+GITHUB_SQL_FOLDER=sql/
+
+# GitHub OAuth (optional - enables "Sign in with GitHub")
+# GITHUB_OAUTH_CLIENT_ID=your_oauth_client_id
+# GITHUB_OAUTH_CLIENT_SECRET=your_oauth_client_secret
+# GITHUB_OAUTH_CALLBACK_URL=http://localhost:3000/auth/github/callback
 
 # Session Secret
 SESSION_SECRET=another_random_secret_here
@@ -127,7 +133,13 @@ git branch -M main
 git push -u origin main
 ```
 
-3. Update your `.env` file with `GITHUB_REPO=your-org/sql-scripts`
+3. Update your `.env` file:
+   - `GITHUB_REPO=your-org/sql-scripts`
+   - `GITHUB_SQL_FOLDER=sql/` (watch only the sql/ folder)
+
+**Alternative: Watch a folder in an existing repo** (e.g., Apollo cluster):
+- `GITHUB_REPO=your-org/apollo-cluster`
+- `GITHUB_SQL_FOLDER=migrations/sql/`
 
 ## Step 7: Start the Application
 
@@ -290,8 +302,9 @@ psql postgresql://sqlexec:password@localhost:5432/audit_db
 2. Check server logs for webhook processing
 3. Verify PR had required approvals
 4. Ensure SQL files end with `.sql` extension
-5. Verify GitHub token has correct permissions
-6. Check files are not in `.gitignore`
+5. Check if files are in the configured `GITHUB_SQL_FOLDER` (if set)
+6. Verify GitHub token has correct permissions
+7. Check files are not in `.gitignore`
 
 ## Security Best Practices
 
@@ -304,10 +317,33 @@ psql postgresql://sqlexec:password@localhost:5432/audit_db
 7. **Review audit logs** regularly
 8. **Backup databases** before running production scripts
 
+## Optional: GitHub OAuth Setup
+
+To enable "Sign in with GitHub" and auto-fill user information:
+
+1. Go to GitHub → Settings → Developer settings → OAuth Apps
+2. Click "New OAuth App"
+3. Fill in:
+   - **Application name**: Git for SQL
+   - **Homepage URL**: `http://localhost:3000` (or your domain)
+   - **Authorization callback URL**: `http://localhost:3000/auth/github/callback`
+4. Click "Register application"
+5. Copy the **Client ID** and generate a **Client Secret**
+6. Add to your `.env`:
+   ```
+   GITHUB_OAUTH_CLIENT_ID=your_client_id_here
+   GITHUB_OAUTH_CLIENT_SECRET=your_client_secret_here
+   ```
+7. Restart the app
+
+Users can now:
+- Sign in with GitHub
+- Auto-fill their email/username when executing scripts
+- See their avatar in the UI
+
 ## Next Steps
 
-- Add user authentication
-- Implement role-based access control
+- Add role-based access control
 - Add email notifications
 - Create Slack integration
 - Build dry-run mode

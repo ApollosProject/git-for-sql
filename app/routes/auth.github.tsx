@@ -20,4 +20,3 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   return redirect(githubAuthUrl);
 }
-

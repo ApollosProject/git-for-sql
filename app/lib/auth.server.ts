@@ -33,10 +33,7 @@ export async function getUserFromSession(
   return user || null;
 }
 
-export async function createUserSession(
-  user: GitHubUser,
-  redirectTo: string
-) {
+export async function createUserSession(user: GitHubUser, redirectTo: string) {
   const session = await sessionStorage.getSession();
   session.set("user", user);
   return {
@@ -56,4 +53,3 @@ export async function logout(request: Request) {
     },
   };
 }
-

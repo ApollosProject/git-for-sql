@@ -3,6 +3,16 @@ import { useLoaderData } from "@remix-run/react";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { getExecutionHistory } from "~/lib/db.server";
 import { getUserFromSession } from "~/lib/auth.server";
+import { useState } from "react";
+import { DetailsDrawer } from "~/components/DetailsDrawer";
+import {
+  Table,
+  TableHeader,
+  TableHeaderCell,
+  TableBody,
+  TableRow,
+  TableCell,
+} from "~/components/Table";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   // Require authentication
@@ -12,115 +22,136 @@ export async function loader({ request }: LoaderFunctionArgs) {
   }
 
   const url = new URL(request.url);
-  const limit = parseInt(url.searchParams.get('limit') || '50');
-  
+  const limit = parseInt(url.searchParams.get("limit") || "50");
+
   const history = await getExecutionHistory(limit);
-  
+
   return json({ history });
 }
 
 export default function Executions() {
   const { history } = useLoaderData<typeof loader>();
+  const [selectedEntry, setSelectedEntry] = useState<any>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  const openDrawer = (entry: any) => {
+    setSelectedEntry(entry);
+    setIsDrawerOpen(true);
+  };
+
+  const closeDrawer = () => {
+    setIsDrawerOpen(false);
+    setSelectedEntry(null);
+  };
 
   return (
     <div>
-      <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '0.5rem' }}>
-          Execution History
-        </h2>
-        <p style={{ color: '#6b7280' }}>
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold mb-2">Execution History</h2>
+        <p className="text-gray-600">
           Complete audit trail of all SQL executions
         </p>
       </div>
 
       {history.length === 0 ? (
         <div className="card">
-          <p style={{ color: '#6b7280' }}>No execution history yet</p>
+          <p className="text-gray-600">No execution history yet</p>
         </div>
       ) : (
         <div className="card">
-          <table>
-            <thead>
-              <tr>
-                <th>Script</th>
-                <th>Database</th>
-                <th>Executed By</th>
-                <th>Status</th>
-                <th>Rows</th>
-                <th>Time</th>
-                <th>Date</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <TableHeader>
+              <TableHeaderCell>Script</TableHeaderCell>
+              <TableHeaderCell>Database</TableHeaderCell>
+              <TableHeaderCell>Executed By</TableHeaderCell>
+              <TableHeaderCell>Status</TableHeaderCell>
+              <TableHeaderCell>Rows</TableHeaderCell>
+              <TableHeaderCell>Time</TableHeaderCell>
+              <TableHeaderCell>Date</TableHeaderCell>
+              <TableHeaderCell></TableHeaderCell>
+            </TableHeader>
+            <TableBody>
               {history.map((entry) => {
-                const approvers = entry.approvers 
-                  ? (Array.isArray(entry.approvers) ? entry.approvers : JSON.parse(entry.approvers as any))
+                const approvers = entry.approvers
+                  ? Array.isArray(entry.approvers)
+                    ? entry.approvers
+                    : JSON.parse(entry.approvers as any)
                   : [];
-                
+
                 return (
-                  <tr key={entry.id}>
-                    <td>
-                      <div style={{ fontWeight: '500' }}>{entry.script_name}</div>
+                  <TableRow key={entry.id}>
+                    <TableCell>
+                      <div className="font-medium text-gray-900">
+                        {entry.script_name}
+                      </div>
                       {approvers.length > 0 && (
-                        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                          Approved by: {approvers.join(', ')}
+                        <div className="text-xs text-gray-500 mt-1">
+                          Approved by: {approvers.join(", ")}
                         </div>
                       )}
-                    </td>
-                    <td>
-                      <span className={`badge ${entry.target_database === 'production' ? 'badge-error' : 'badge-info'}`}>
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                          entry.target_database === "production"
+                            ? "bg-red-100 text-red-900"
+                            : "bg-blue-100 text-blue-900"
+                        }`}
+                      >
                         {entry.target_database}
                       </span>
-                    </td>
-                    <td>{entry.executed_by}</td>
-                    <td>
-                      <span className={`badge ${entry.status === 'success' ? 'badge-success' : 'badge-error'}`}>
+                    </TableCell>
+                    <TableCell className="text-gray-700">
+                      {entry.executed_by}
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                          entry.status === "success"
+                            ? "bg-green-100 text-green-900"
+                            : "bg-red-100 text-red-900"
+                        }`}
+                      >
                         {entry.status}
                       </span>
-                    </td>
-                    <td>{entry.rows_affected !== null ? entry.rows_affected : 'N/A'}</td>
-                    <td>{entry.execution_time_ms ? `${entry.execution_time_ms}ms` : 'N/A'}</td>
-                    <td style={{ fontSize: '0.875rem' }}>
+                    </TableCell>
+                    <TableCell className="text-gray-700">
+                      {entry.rows_affected !== null
+                        ? entry.rows_affected
+                        : "N/A"}
+                    </TableCell>
+                    <TableCell className="text-gray-600">
+                      {entry.execution_time_ms
+                        ? `${entry.execution_time_ms}ms`
+                        : "N/A"}
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-600">
                       {new Date(entry.executed_at).toLocaleString()}
-                    </td>
-                    <td>
-                      <details>
-                        <summary style={{ cursor: 'pointer', color: '#3b82f6', fontSize: '0.875rem' }}>
-                          Details
-                        </summary>
-                        <div style={{ marginTop: '0.5rem', fontSize: '0.75rem' }}>
-                          <pre style={{ maxHeight: '200px', overflow: 'auto' }}>
-                            {entry.script_content}
-                          </pre>
-                          {entry.error_message && (
-                            <div style={{ marginTop: '0.5rem', color: '#ef4444' }}>
-                              <strong>Error:</strong> {entry.error_message}
-                            </div>
-                          )}
-                          {entry.github_pr_url && (
-                            <div style={{ marginTop: '0.5rem' }}>
-                              <a 
-                                href={entry.github_pr_url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                style={{ color: '#3b82f6', textDecoration: 'none' }}
-                              >
-                                View PR →
-                              </a>
-                            </div>
-                          )}
-                        </div>
-                      </details>
-                    </td>
-                  </tr>
+                    </TableCell>
+                    <TableCell>
+                      <button
+                        onClick={() => openDrawer(entry)}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
+                      >
+                        Details
+                      </button>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
+      )}
+
+      {/* Details Drawer */}
+      {selectedEntry && (
+        <DetailsDrawer
+          isOpen={isDrawerOpen}
+          onClose={closeDrawer}
+          entry={selectedEntry}
+        />
       )}
     </div>
   );
 }
-

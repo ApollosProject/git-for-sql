@@ -18,6 +18,24 @@ import { logExecution } from "~/lib/audit.server";
 import { useState, useEffect, useRef } from "react";
 import type { ExecutionLog } from "~/lib/types";
 import { getUserFromSession } from "~/lib/auth.server";
+import {
+  Check,
+  Clock,
+  CheckCircle,
+  Warning,
+  Lightning,
+  X,
+  Info,
+} from "phosphor-react";
+import {
+  Table,
+  TableHeader,
+  TableHeaderCell,
+  TableBody,
+  TableRow,
+  TableCell,
+} from "~/components/Table";
+import { DetailsDrawer } from "~/components/DetailsDrawer";
 
 export async function loader({ params, request }: LoaderFunctionArgs) {
   // Require authentication
@@ -140,8 +158,20 @@ export default function ScriptDetail() {
   const [targetDatabase, setTargetDatabase] = useState<
     "staging" | "production"
   >("staging");
+  const [selectedEntry, setSelectedEntry] = useState<any>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const prevNavigationState = useRef<string>(navigation.state);
   const wasSubmitting = useRef<boolean>(false);
+
+  const openDrawer = (entry: any) => {
+    setSelectedEntry(entry);
+    setIsDrawerOpen(true);
+  };
+
+  const closeDrawer = () => {
+    setIsDrawerOpen(false);
+    setSelectedEntry(null);
+  };
 
   const isExecuting = navigation.state === "submitting";
 
@@ -184,116 +214,97 @@ export default function ScriptDetail() {
 
   return (
     <div>
-      <div style={{ marginBottom: "2rem" }}>
+      <div className="mb-8">
         <a
           href="/"
-          style={{
-            color: "#3b82f6",
-            textDecoration: "none",
-            fontSize: "0.875rem",
-          }}
+          className="text-blue-600 hover:text-blue-800 no-underline text-sm"
         >
           ← Back to Dashboard
         </a>
       </div>
 
       <div className="card">
-        <h2
-          style={{
-            fontSize: "1.5rem",
-            fontWeight: "700",
-            marginBottom: "1rem",
-          }}
-        >
-          {script.script_name}
-        </h2>
+        <h2 className="text-2xl font-bold mb-4">{script.script_name}</h2>
 
-        <div
-          style={{
-            display: "flex",
-            gap: "0.5rem",
-            marginBottom: "1rem",
-            flexWrap: "wrap",
-          }}
-        >
+        {/* Status Badges */}
+        <div className="flex flex-wrap gap-2 mb-6">
           {stagingExecuted && (
-            <span className="badge badge-success">✓ Staging Executed</span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-900">
+              <Check size={14} weight="bold" />
+              Staging Executed
+            </span>
           )}
           {productionExecuted && (
-            <span className="badge badge-success">✓ Production Executed</span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-900">
+              <Check size={14} weight="bold" />
+              Production Executed
+            </span>
           )}
           {!stagingExecuted && !productionExecuted && (
-            <span className="badge badge-warning">
-              ⏳ Pending Staging Execution
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-900">
+              <Clock size={14} weight="bold" />
+              Pending Staging Execution
             </span>
           )}
           {stagingExecuted && !productionExecuted && (
-            <span className="badge badge-info">✅ Ready for Production</span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-900">
+              <CheckCircle size={14} weight="bold" />
+              Ready for Production
+            </span>
           )}
           {directProd && (
-            <span
-              className="badge"
-              style={{ background: "#fbbf24", color: "#78350f" }}
-            >
-              ⚡ Direct Production Allowed
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-200 text-amber-900">
+              <Lightning size={14} weight="bold" />
+              Direct Production Allowed
             </span>
           )}
           {approvers.length > 0 && (
-            <span
-              className="badge"
-              style={{ background: "#f3f4f6", color: "#374151" }}
-            >
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
               {approvers.length} approver{approvers.length !== 1 ? "s" : ""}
             </span>
           )}
         </div>
 
-        {script.github_pr_url && (
-          <p style={{ marginBottom: "1rem" }}>
-            <a
-              href={script.github_pr_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: "#3b82f6", textDecoration: "none" }}
-            >
-              View GitHub PR →
-            </a>
-          </p>
-        )}
+        {/* Metadata Section */}
+        <div className="mb-6 space-y-3">
+          {script.github_pr_url && (
+            <div>
+              <a
+                href={script.github_pr_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-800 no-underline text-sm font-medium"
+              >
+                View GitHub PR →
+              </a>
+            </div>
+          )}
 
-        {approvers.length > 0 && (
-          <p
-            style={{
-              marginBottom: "1rem",
-              fontSize: "0.875rem",
-              color: "#6b7280",
-            }}
-          >
-            <strong>Approved by:</strong> {approvers.join(", ")}
-          </p>
-        )}
-
-        <div style={{ marginBottom: "1rem" }}>
-          <h3
-            style={{
-              fontSize: "1.125rem",
-              fontWeight: "600",
-              marginBottom: "0.5rem",
-            }}
-          >
-            SQL Script
-          </h3>
-          <pre>{script.script_content}</pre>
+          {approvers.length > 0 && (
+            <p className="text-sm text-gray-600">
+              <strong>Approved by:</strong> {approvers.join(", ")}
+            </p>
+          )}
         </div>
 
+        {/* SQL Script Section */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-3 text-gray-900">
+            SQL Script
+          </h3>
+          <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm">
+            {script.script_content}
+          </pre>
+        </div>
+
+        {/* Action Messages */}
         {actionData && (
           <div
-            className={`alert ${
+            className={`mb-4 p-4 rounded-lg ${
               "success" in actionData && actionData.success
-                ? "alert-success"
-                : "alert-error"
+                ? "bg-green-50 border border-green-200 text-green-900"
+                : "bg-red-50 border border-red-200 text-red-900"
             }`}
-            style={{ marginBottom: "1rem" }}
           >
             {"success" in actionData && actionData.success
               ? "message" in actionData
@@ -306,19 +317,13 @@ export default function ScriptDetail() {
         )}
 
         {isExecuting && (
-          <div
-            className="alert"
-            style={{
-              marginBottom: "1rem",
-              background: "#fef3c7",
-              border: "1px solid #fbbf24",
-            }}
-          >
+          <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-900">
             Executing script... Please wait.
           </div>
         )}
 
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+        {/* Action Buttons */}
+        <div className="flex flex-wrap gap-3 items-center">
           <button
             onClick={() => {
               setTargetDatabase("staging");
@@ -342,53 +347,45 @@ export default function ScriptDetail() {
             </button>
           )}
           {!canExecuteProduction && !stagingExecuted && (
-            <div
-              style={{
-                padding: "0.5rem",
-                background: "#fef3c7",
-                borderRadius: "0.375rem",
-                fontSize: "0.875rem",
-                color: "#78350f",
-              }}
-            >
-              ⚠️ Execute on staging first, or add <code>-- DirectProd</code>{" "}
-              flag to bypass
+            <div className="flex items-center gap-2 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-900">
+              <Warning size={16} weight="bold" />
+              <span>
+                Execute on staging first, or add{" "}
+                <code className="bg-yellow-100 px-1 rounded">
+                  -- DirectProd
+                </code>{" "}
+                flag to bypass
+              </span>
             </div>
           )}
         </div>
       </div>
 
       {history.length > 0 && (
-        <div className="card" style={{ marginTop: "2rem" }}>
-          <h3
-            style={{
-              fontSize: "1.25rem",
-              fontWeight: "600",
-              marginBottom: "1rem",
-            }}
-          >
+        <div className="card mt-8">
+          <h3 className="text-xl font-semibold mb-4 text-gray-900">
             Execution History
           </h3>
-          <div style={{ overflowX: "auto" }}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Executed By</th>
-                  <th>Target</th>
-                  <th>Status</th>
-                  <th>Rows Affected</th>
-                  <th>Time</th>
-                  <th>Date</th>
-                  <th>Results</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.map((entry) => (
-                  <ExecutionHistoryRow key={entry.id} entry={entry} />
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableHeaderCell>Executed By</TableHeaderCell>
+              <TableHeaderCell>Target</TableHeaderCell>
+              <TableHeaderCell>Status</TableHeaderCell>
+              <TableHeaderCell>Rows Affected</TableHeaderCell>
+              <TableHeaderCell>Time</TableHeaderCell>
+              <TableHeaderCell>Date</TableHeaderCell>
+              <TableHeaderCell>Results</TableHeaderCell>
+            </TableHeader>
+            <TableBody>
+              {history.map((entry) => (
+                <ExecutionHistoryRow
+                  key={entry.id}
+                  entry={entry}
+                  onOpenDetails={openDrawer}
+                />
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
 
@@ -400,24 +397,19 @@ export default function ScriptDetail() {
           }}
         >
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3
-              style={{
-                fontSize: "1.25rem",
-                fontWeight: "700",
-                marginBottom: "1rem",
-                color: "#ef4444",
-              }}
-            >
-              ⚠️ Confirm Execution
+            <h3 className="text-xl font-bold mb-4 text-red-600 flex items-center gap-2">
+              <Warning size={24} weight="bold" />
+              Confirm Execution
             </h3>
 
-            <p style={{ marginBottom: "1rem" }}>
+            <p className="mb-4">
               You are about to execute SQL against the{" "}
               <strong
-                style={{
-                  color:
-                    targetDatabase === "production" ? "#ef4444" : "#3b82f6",
-                }}
+                className={
+                  targetDatabase === "production"
+                    ? "text-red-600"
+                    : "text-blue-600"
+                }
               >
                 {targetDatabase}
               </strong>{" "}
@@ -427,60 +419,37 @@ export default function ScriptDetail() {
             {targetDatabase === "production" &&
               !stagingExecuted &&
               directProd && (
-                <div
-                  style={{
-                    padding: "0.75rem",
-                    background: "#fef3c7",
-                    borderRadius: "0.375rem",
-                    marginBottom: "1rem",
-                  }}
-                >
-                  <strong>⚠️ Direct Production Execution</strong>
-                  <p style={{ margin: "0.5rem 0 0 0", fontSize: "0.875rem" }}>
-                    This script has the <code>-- DirectProd</code> flag,
-                    allowing direct production execution without staging.
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
+                  <strong className="flex items-center gap-1 text-yellow-900">
+                    <Warning size={16} weight="bold" />
+                    Direct Production Execution
+                  </strong>
+                  <p className="mt-2 text-sm text-yellow-800">
+                    This script has the{" "}
+                    <code className="bg-yellow-100 px-1 rounded">
+                      -- DirectProd
+                    </code>{" "}
+                    flag, allowing direct production execution without staging.
                   </p>
                 </div>
               )}
 
-            <div
-              style={{
-                background: "#f9fafb",
-                padding: "1rem",
-                borderRadius: "0.375rem",
-                marginBottom: "1rem",
-              }}
-            >
-              <p
-                style={{
-                  fontSize: "0.875rem",
-                  fontWeight: "600",
-                  marginBottom: "0.5rem",
-                }}
-              >
+            <div className="bg-gray-50 p-4 rounded-lg mb-4">
+              <p className="text-sm font-semibold mb-2 text-gray-900">
                 Script: {script.script_name}
               </p>
-              <pre
-                style={{
-                  fontSize: "0.75rem",
-                  background: "#1f2937",
-                  padding: "0.75rem",
-                }}
-              >
+              <pre className="text-xs bg-gray-900 text-gray-100 p-3 rounded overflow-x-auto">
                 {script.script_content}
               </pre>
             </div>
 
             <Form method="post">
-              <p
-                style={{
-                  marginBottom: "1rem",
-                  fontSize: "0.875rem",
-                  color: "#6b7280",
-                }}
-              >
+              <p className="mb-4 text-sm text-gray-600">
                 This action will be logged in the audit trail as{" "}
-                <strong>{user?.email || user?.username || "you"}</strong>.
+                <strong className="text-gray-900">
+                  {user?.email || user?.username || "you"}
+                </strong>
+                .
               </p>
 
               <input
@@ -489,13 +458,7 @@ export default function ScriptDetail() {
                 value={targetDatabase}
               />
 
-              <div
-                style={{
-                  display: "flex",
-                  gap: "0.5rem",
-                  justifyContent: "flex-end",
-                }}
-              >
+              <div className="flex gap-2 justify-end">
                 <button
                   type="button"
                   onClick={() => {
@@ -520,14 +483,27 @@ export default function ScriptDetail() {
           </div>
         </div>
       )}
+
+      {/* Details Drawer */}
+      {selectedEntry && (
+        <DetailsDrawer
+          isOpen={isDrawerOpen}
+          onClose={closeDrawer}
+          entry={selectedEntry}
+        />
+      )}
     </div>
   );
 }
 
-// Component for rendering execution history rows with expandable results
-function ExecutionHistoryRow({ entry }: { entry: any }) {
-  const [showResults, setShowResults] = useState(false);
-
+// Component for rendering execution history rows
+function ExecutionHistoryRow({
+  entry,
+  onOpenDetails,
+}: {
+  entry: any;
+  onOpenDetails: (entry: any) => void;
+}) {
   // Parse result_data if it's a string (shouldn't happen with JSONB, but handle it)
   let resultData = entry.result_data;
   if (resultData && typeof resultData === "string") {
@@ -557,201 +533,111 @@ function ExecutionHistoryRow({ entry }: { entry: any }) {
   } else if (isSelectQuery && entry.rows_affected && entry.rows_affected > 0) {
     // SELECT query with rows but no results captured (likely executed before feature was added)
     resultDisplay = (
-      <span style={{ color: "#f59e0b", fontSize: "0.875rem" }}>
+      <span
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200"
+        title="This SELECT query returned rows, but results weren't captured (likely executed before result capture feature was added). Re-execute to see results."
+      >
+        <Warning size={14} weight="bold" />
         Not captured
-        <span
-          style={{ marginLeft: "0.25rem" }}
-          title="This SELECT query returned rows, but results weren't captured (likely executed before result capture feature was added). Re-execute to see results."
-        >
-          ⚠️
-        </span>
       </span>
     );
   } else {
     // DDL/DML query - no results expected
     resultDisplay = (
-      <span style={{ color: "#6b7280", fontSize: "0.875rem" }}>
+      <span
+        className="inline-flex items-center gap-1.5 text-gray-500 text-sm"
+        title="Results are only available for SELECT queries. DDL/DML queries show row count in 'Rows Affected' column."
+      >
         N/A
-        <span
-          style={{ marginLeft: "0.25rem" }}
-          title="Results are only available for SELECT queries. DDL/DML queries show row count in 'Rows Affected' column."
-        >
-          ℹ️
-        </span>
+        <Info size={14} weight="regular" className="text-gray-400" />
       </span>
     );
   }
 
   if (!hasResults) {
     return (
-      <tr>
-        <td>{entry.executed_by}</td>
-        <td>
+      <TableRow>
+        <TableCell>{entry.executed_by}</TableCell>
+        <TableCell>
           <span
-            className={`badge ${
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
               entry.target_database === "production"
-                ? "badge-error"
-                : "badge-info"
+                ? "bg-red-100 text-red-900"
+                : "bg-blue-100 text-blue-900"
             }`}
           >
             {entry.target_database}
           </span>
-        </td>
-        <td>
+        </TableCell>
+        <TableCell>
           <span
-            className={`badge ${
-              entry.status === "success" ? "badge-success" : "badge-error"
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+              entry.status === "success"
+                ? "bg-green-100 text-green-900"
+                : "bg-red-100 text-red-900"
             }`}
           >
             {entry.status}
           </span>
-        </td>
-        <td>{entry.rows_affected !== null ? entry.rows_affected : "N/A"}</td>
-        <td>
+        </TableCell>
+        <TableCell className="text-gray-700">
+          {entry.rows_affected !== null ? entry.rows_affected : "N/A"}
+        </TableCell>
+        <TableCell className="text-gray-600">
           {entry.execution_time_ms ? `${entry.execution_time_ms}ms` : "N/A"}
-        </td>
-        <td>{new Date(entry.executed_at).toLocaleString()}</td>
-        <td>{resultDisplay}</td>
-      </tr>
+        </TableCell>
+        <TableCell className="text-sm text-gray-600">
+          {new Date(entry.executed_at).toLocaleString()}
+        </TableCell>
+        <TableCell>{resultDisplay}</TableCell>
+      </TableRow>
     );
   }
 
-  const parsedResultData = (
-    typeof resultData === "string" ? JSON.parse(resultData) : resultData
-  ) as any[];
-  const columns =
-    parsedResultData.length > 0 ? Object.keys(parsedResultData[0]) : [];
-
   return (
-    <>
-      <tr>
-        <td>{entry.executed_by}</td>
-        <td>
-          <span
-            className={`badge ${
-              entry.target_database === "production"
-                ? "badge-error"
-                : "badge-info"
-            }`}
-          >
-            {entry.target_database}
-          </span>
-        </td>
-        <td>
-          <span
-            className={`badge ${
-              entry.status === "success" ? "badge-success" : "badge-error"
-            }`}
-          >
-            {entry.status}
-          </span>
-        </td>
-        <td>{entry.rows_affected !== null ? entry.rows_affected : "N/A"}</td>
-        <td>
-          {entry.execution_time_ms ? `${entry.execution_time_ms}ms` : "N/A"}
-        </td>
-        <td>{new Date(entry.executed_at).toLocaleString()}</td>
-        <td>
+    <TableRow>
+      <TableCell>{entry.executed_by}</TableCell>
+      <TableCell>
+        <span
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+            entry.target_database === "production"
+              ? "bg-red-100 text-red-900"
+              : "bg-blue-100 text-blue-900"
+          }`}
+        >
+          {entry.target_database}
+        </span>
+      </TableCell>
+      <TableCell>
+        <span
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+            entry.status === "success"
+              ? "bg-green-100 text-green-900"
+              : "bg-red-100 text-red-900"
+          }`}
+        >
+          {entry.status}
+        </span>
+      </TableCell>
+      <TableCell className="text-gray-700">
+        {entry.rows_affected !== null ? entry.rows_affected : "N/A"}
+      </TableCell>
+      <TableCell className="text-gray-600">
+        {entry.execution_time_ms ? `${entry.execution_time_ms}ms` : "N/A"}
+      </TableCell>
+      <TableCell className="text-sm text-gray-600">
+        {new Date(entry.executed_at).toLocaleString()}
+      </TableCell>
+      <TableCell>
+        {resultDisplay || (
           <button
-            onClick={() => setShowResults(!showResults)}
-            style={{
-              background: "transparent",
-              border: "1px solid #3b82f6",
-              color: "#3b82f6",
-              padding: "0.25rem 0.5rem",
-              borderRadius: "0.25rem",
-              cursor: "pointer",
-              fontSize: "0.875rem",
-            }}
+            onClick={() => onOpenDetails(entry)}
+            className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
           >
-            {showResults
-              ? "▼ Hide"
-              : `▶ Show (${parsedResultData.length} row${
-                  parsedResultData.length !== 1 ? "s" : ""
-                })`}
+            Details
           </button>
-        </td>
-      </tr>
-      {showResults && (
-        <tr>
-          <td colSpan={7} style={{ padding: "1rem", background: "#f9fafb" }}>
-            <div
-              style={{
-                marginBottom: "0.5rem",
-                fontWeight: "600",
-                fontSize: "0.875rem",
-              }}
-            >
-              Query Results:
-            </div>
-            <div
-              style={{
-                overflowX: "auto",
-                maxHeight: "400px",
-                overflowY: "auto",
-              }}
-            >
-              <table
-                style={{
-                  width: "100%",
-                  fontSize: "0.875rem",
-                  borderCollapse: "collapse",
-                }}
-              >
-                <thead>
-                  <tr
-                    style={{
-                      background: "#e5e7eb",
-                      position: "sticky",
-                      top: 0,
-                    }}
-                  >
-                    {columns.map((col) => (
-                      <th
-                        key={col}
-                        style={{
-                          padding: "0.5rem",
-                          textAlign: "left",
-                          border: "1px solid #d1d5db",
-                        }}
-                      >
-                        {col}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {parsedResultData.map((row, idx) => (
-                    <tr
-                      key={idx}
-                      style={{
-                        background: idx % 2 === 0 ? "#ffffff" : "#f9fafb",
-                      }}
-                    >
-                      {columns.map((col) => (
-                        <td
-                          key={col}
-                          style={{
-                            padding: "0.5rem",
-                            border: "1px solid #d1d5db",
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          {row[col] !== null && row[col] !== undefined ? (
-                            String(row[col])
-                          ) : (
-                            <span style={{ color: "#9ca3af" }}>NULL</span>
-                          )}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </td>
-        </tr>
-      )}
-    </>
+        )}
+      </TableCell>
+    </TableRow>
   );
 }

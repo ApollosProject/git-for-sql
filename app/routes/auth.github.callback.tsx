@@ -76,4 +76,3 @@ export async function loader({ request }: LoaderFunctionArgs) {
     return redirect("/login?error=oauth_failed");
   }
 }
-

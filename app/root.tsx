@@ -12,6 +12,7 @@ import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import stylesheet from "./tailwind.css";
 import { getUserFromSession } from "~/lib/auth.server";
+import { Lock } from "phosphor-react";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesheet },
@@ -51,9 +52,11 @@ export default function App() {
           
           body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background: #f9fafb;
+            background: linear-gradient(135deg, #f8f9ff 0%, #f9fafb 50%, #faf5ff 100%);
+            background-attachment: fixed;
             color: #111827;
             line-height: 1.6;
+            min-height: 100vh;
           }
           
           .container {
@@ -199,6 +202,10 @@ export default function App() {
             border-bottom: 1px solid #e5e7eb;
           }
           
+          tbody tr:last-child td {
+            border-bottom: none;
+          }
+          
           th {
             font-weight: 600;
             color: #374151;
@@ -259,7 +266,10 @@ export default function App() {
           <div className="container">
             <div className="flex justify-between items-center">
               <div>
-                <h1>🔐 Git for SQL</h1>
+                <h1 className="flex items-center gap-2">
+                  <Lock size={24} weight="bold" className="text-indigo-600" />
+                  Git for SQL
+                </h1>
                 <p>Peer-reviewed SQL execution with audit logging</p>
                 <nav className="nav">
                   <a href="/">Dashboard</a>
@@ -310,4 +320,3 @@ export default function App() {
     </html>
   );
 }
-

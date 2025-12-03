@@ -3,6 +3,17 @@ import { useLoaderData, useRevalidator } from "@remix-run/react";
 import { useEffect } from "react";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import {
+  MagnifyingGlass,
+  Clock,
+  CheckCircle,
+  Check,
+  Warning,
+  Calendar,
+  User,
+  ArrowClockwise,
+  Lightning,
+} from "phosphor-react";
+import {
   getApprovedScripts,
   getExistingScriptNames,
   getScriptExecutionHistory,
@@ -161,7 +172,11 @@ export default function Index() {
           {/* In Review Column */}
           <div className="bg-gray-50 rounded-lg p-4 flex flex-col max-h-[calc(100vh-250px)]">
             <div className="flex items-center gap-2 mb-4 flex-shrink-0">
-              <span className="text-purple-500 text-xl">🔍</span>
+              <MagnifyingGlass
+                size={20}
+                weight="bold"
+                className="text-purple-500"
+              />
               <h3 className="text-lg font-semibold text-gray-800">In Review</h3>
               <span className="bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-1 rounded-full">
                 {openPRs.length}
@@ -181,7 +196,7 @@ export default function Index() {
           {/* Pending Staging Column */}
           <div className="bg-gray-50 rounded-lg p-4 flex flex-col max-h-[calc(100vh-250px)]">
             <div className="flex items-center gap-2 mb-4 flex-shrink-0">
-              <span className="text-amber-500 text-xl">⏳</span>
+              <Clock size={20} weight="bold" className="text-amber-500" />
               <h3 className="text-lg font-semibold text-gray-800">
                 Pending Staging
               </h3>
@@ -205,7 +220,7 @@ export default function Index() {
           {/* Ready for Production Column */}
           <div className="bg-gray-50 rounded-lg p-4 flex flex-col max-h-[calc(100vh-250px)]">
             <div className="flex items-center gap-2 mb-4 flex-shrink-0">
-              <span className="text-blue-500 text-xl">✅</span>
+              <CheckCircle size={20} weight="bold" className="text-blue-500" />
               <h3 className="text-lg font-semibold text-gray-800">
                 Ready for Prod
               </h3>
@@ -229,7 +244,7 @@ export default function Index() {
           {/* Completed Column */}
           <div className="bg-gray-50 rounded-lg p-4 flex flex-col max-h-[calc(100vh-250px)]">
             <div className="flex items-center gap-2 mb-4 flex-shrink-0">
-              <span className="text-green-500 text-xl">✓</span>
+              <Check size={20} weight="bold" className="text-green-500" />
               <h3 className="text-lg font-semibold text-gray-800">Completed</h3>
               <span className="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded-full">
                 {completed.length}
@@ -290,8 +305,16 @@ function PRCard({ pr }: { pr: any }) {
       </div>
 
       <div className="flex items-center justify-between text-xs text-gray-500">
-        <span>👤 {pr.author}</span>
-        {pr.createdAt && <span>📅 {formatRelativeTime(pr.createdAt)}</span>}
+        <span className="flex items-center gap-1">
+          <User size={12} weight="regular" />
+          {pr.author}
+        </span>
+        {pr.createdAt && (
+          <span className="flex items-center gap-1">
+            <Calendar size={12} weight="regular" />
+            {formatRelativeTime(pr.createdAt)}
+          </span>
+        )}
       </div>
     </a>
   );
@@ -325,12 +348,24 @@ function KanbanCard({ script }: { script: any }) {
   // Get primary status badge
   const getPrimaryStatus = () => {
     if (script.production_executed) {
-      return { text: "✓ Production", color: "bg-green-100 text-green-900" };
+      return {
+        text: "Production",
+        icon: <Check size={12} weight="bold" className="inline" />,
+        color: "bg-green-100 text-green-900",
+      };
     }
     if (script.staging_executed) {
-      return { text: "✓ Staging", color: "bg-green-100 text-green-900" };
+      return {
+        text: "Staging",
+        icon: <Check size={12} weight="bold" className="inline" />,
+        color: "bg-green-100 text-green-900",
+      };
     }
-    return { text: "⏳ Pending", color: "bg-yellow-100 text-yellow-900" };
+    return {
+      text: "Pending",
+      icon: <Clock size={12} weight="bold" className="inline" />,
+      color: "bg-yellow-100 text-yellow-900",
+    };
   };
 
   const primaryStatus = getPrimaryStatus();
@@ -348,35 +383,47 @@ function KanbanCard({ script }: { script: any }) {
 
       <div className="flex flex-wrap gap-1.5 mb-2">
         <span
-          className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${primaryStatus.color}`}
+          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold ${primaryStatus.color}`}
         >
+          {primaryStatus.icon}
           {primaryStatus.text}
         </span>
 
         {script.direct_prod && (
-          <span className="inline-block px-2 py-0.5 rounded text-xs font-semibold bg-amber-200 text-amber-900">
-            ⚡ DirectProd
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-amber-200 text-amber-900">
+            <Lightning size={12} weight="bold" />
+            DirectProd
           </span>
         )}
 
         {hasErrors && (
-          <span className="inline-block px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-900">
-            ⚠️ Errors
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-900">
+            <Warning size={12} weight="bold" />
+            Errors
           </span>
         )}
 
         {executionCount > 0 && (
-          <span className="inline-block px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-700">
-            🔄 {executionCount}x
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-700">
+            <ArrowClockwise size={12} weight="regular" />
+            {executionCount}x
           </span>
         )}
       </div>
 
       <div className="flex items-center justify-between text-xs text-gray-500">
         {script.approved_at && (
-          <span>📅 {formatRelativeTime(script.approved_at)}</span>
+          <span className="flex items-center gap-1">
+            <Calendar size={12} weight="regular" />
+            {formatRelativeTime(script.approved_at)}
+          </span>
         )}
-        {approvers.length > 0 && <span>👥 {approvers.length}</span>}
+        {approvers.length > 0 && (
+          <span className="flex items-center gap-1">
+            <User size={12} weight="regular" />
+            {approvers.length}
+          </span>
+        )}
       </div>
     </a>
   );
@@ -425,12 +472,13 @@ function ScriptCard({ script }: { script: any }) {
                     : "Staging executed"
                 }
               >
-                ✓ Staging
+                <Check size={12} weight="bold" className="inline mr-1" />
+                Staging
               </span>
             )}
             {script.production_executed && (
               <span
-                className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-900"
+                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-900"
                 title={
                   script.production_executed_at
                     ? `Production executed ${formatRelativeTime(
@@ -439,37 +487,42 @@ function ScriptCard({ script }: { script: any }) {
                     : "Production executed"
                 }
               >
-                ✓ Production
+                <Check size={12} weight="bold" className="inline mr-1" />
+                Production
               </span>
             )}
             {!script.staging_executed && !script.production_executed && (
-              <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-900">
-                ⏳ Pending Staging
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-900">
+                <Clock size={12} weight="bold" className="inline mr-1" />
+                Pending Staging
               </span>
             )}
             {script.staging_executed && !script.production_executed && (
-              <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-900">
-                ✅ Ready for Prod
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-900">
+                <CheckCircle size={12} weight="bold" className="inline mr-1" />
+                Ready for Prod
               </span>
             )}
 
             {/* Feature Flags */}
             {script.direct_prod && (
               <span
-                className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-amber-200 text-amber-900"
+                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-200 text-amber-900"
                 title="Can execute directly on production"
               >
-                ⚡ DirectProd
+                <Lightning size={12} weight="bold" className="inline mr-1" />
+                DirectProd
               </span>
             )}
 
             {/* Approval Info */}
             {approvers.length > 0 && (
               <span
-                className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-900"
+                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-900"
                 title={`Approved by: ${approvers.join(", ")}`}
               >
-                👥 {approvers.length} approver
+                <User size={12} weight="regular" className="inline mr-1" />
+                {approvers.length} approver
                 {approvers.length !== 1 ? "s" : ""}
               </span>
             )}
@@ -477,44 +530,52 @@ function ScriptCard({ script }: { script: any }) {
             {/* Execution Stats */}
             {script.executionCount > 0 && (
               <span
-                className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700"
+                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700"
                 title={`Executed ${script.executionCount} time${
                   script.executionCount !== 1 ? "s" : ""
                 }`}
               >
-                🔄 {script.executionCount}x
+                <ArrowClockwise
+                  size={12}
+                  weight="regular"
+                  className="inline mr-1"
+                />
+                {script.executionCount}x
               </span>
             )}
 
             {/* Error Indicator */}
             {script.hasErrors && (
               <span
-                className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-900"
+                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-900"
                 title="Has execution errors"
               >
-                ⚠️ Errors
+                <Warning size={12} weight="bold" className="inline mr-1" />
+                Errors
               </span>
             )}
 
             {/* Last Execution Info */}
             {script.lastExecutedAt && (
               <span
-                className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-900"
+                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-900"
                 title={`Last executed ${formatRelativeTime(
                   script.lastExecutedAt
                 )} by ${script.lastExecutedBy}`}
               >
-                🕒 {formatRelativeTime(script.lastExecutedAt)}
+                <Clock size={12} weight="regular" className="inline mr-1" />
+                {formatRelativeTime(script.lastExecutedAt)}
               </span>
             )}
 
             {/* Approved Date */}
             {script.approved_at && (
               <span
-                className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-900"
+                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-900"
                 title={`Approved ${formatRelativeTime(script.approved_at)}`}
               >
-                📅 Approved {formatRelativeTime(script.approved_at)}
+                <Calendar size={12} weight="regular" className="inline mr-1" />
+                Approved {formatRelativeTime(script.approved_at)}
               </span>
             )}
           </div>

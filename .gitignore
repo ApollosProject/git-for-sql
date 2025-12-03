@@ -33,3 +33,6 @@ coverage/
 
 # Misc
 .cursor/
+
+# Style Guide
+style_guide/

@@ -1,6 +1,6 @@
-import { redirect } from "@remix-run/node";
-import type { LoaderFunctionArgs } from "@remix-run/node";
-import { Form, useSearchParams } from "@remix-run/react";
+import { redirect } from "react-router";
+import type { LoaderFunctionArgs } from "react-router";
+import { Form, useSearchParams } from "react-router";
 import { getUserFromSession } from "~/lib/auth.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {

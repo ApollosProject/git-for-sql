@@ -1,5 +1,5 @@
-import { json } from "@remix-run/node";
-import type { ActionFunctionArgs } from "@remix-run/node";
+import { json } from "~/lib/json.server";
+import type { ActionFunctionArgs } from "react-router";
 import {
   verifyWebhookSignature,
   getPRApprovers,

@@ -1,5 +1,5 @@
-import { redirect } from "@remix-run/node";
-import type { LoaderFunctionArgs } from "@remix-run/node";
+import { redirect } from "react-router";
+import type { LoaderFunctionArgs } from "react-router";
 import { config } from "~/config.server";
 import { createUserSession } from "~/lib/auth.server";
 

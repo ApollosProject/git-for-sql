@@ -1,5 +1,5 @@
-import { redirect } from "@remix-run/node";
-import type { ActionFunctionArgs } from "@remix-run/node";
+import { redirect } from "react-router";
+import type { ActionFunctionArgs } from "react-router";
 import { logout } from "~/lib/auth.server";
 
 export async function action({ request }: ActionFunctionArgs) {

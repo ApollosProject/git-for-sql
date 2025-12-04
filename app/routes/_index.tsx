@@ -1,7 +1,8 @@
-import { json, redirect } from "@remix-run/node";
-import { useLoaderData, useRevalidator } from "@remix-run/react";
+import { redirect } from "react-router";
+import { json } from "~/lib/json.server";
+import { useLoaderData, useRevalidator } from "react-router";
 import { useEffect } from "react";
-import type { LoaderFunctionArgs } from "@remix-run/node";
+import type { LoaderFunctionArgs } from "react-router";
 import {
   MagnifyingGlass,
   Clock,
@@ -186,7 +187,7 @@ export default function Index() {
                 {openPRs.length}
               </span>
             </div>
-            <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
+            <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-3">
               {openPRs.length > 0 ? (
                 openPRs.map((pr) => <PRCard key={pr.prNumber} pr={pr} />)
               ) : (
@@ -208,7 +209,7 @@ export default function Index() {
                 {pending.length}
               </span>
             </div>
-            <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
+            <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-3">
               {pending.length > 0 ? (
                 pending.map((script) => (
                   <KanbanCard
@@ -240,7 +241,7 @@ export default function Index() {
                 {readyForProd.length}
               </span>
             </div>
-            <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
+            <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-3">
               {readyForProd.length > 0 ? (
                 readyForProd.map((script) => (
                   <KanbanCard
@@ -268,7 +269,7 @@ export default function Index() {
                 {completed.length}
               </span>
             </div>
-            <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
+            <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-3">
               {completed.length > 0 ? (
                 completed.map((script) => (
                   <KanbanCard

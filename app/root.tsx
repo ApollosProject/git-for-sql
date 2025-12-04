@@ -1,22 +1,20 @@
 import {
   Links,
-  LiveReload,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
   Form,
   useLocation,
-} from "@remix-run/react";
-import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
-import { json } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
-import stylesheet from "./tailwind.css";
+} from "react-router";
+import type { LinksFunction, LoaderFunctionArgs } from "react-router";
+import { json } from "~/lib/json.server";
+import { useLoaderData } from "react-router";
+import "./tailwind.css";
 import { getUserFromSession } from "~/lib/auth.server";
 import { Lock } from "phosphor-react";
 
 export const links: LinksFunction = () => [
-  { rel: "stylesheet", href: stylesheet },
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
   {
     rel: "preconnect",
@@ -118,7 +116,6 @@ export default function App() {
         </main>
         <ScrollRestoration />
         <Scripts />
-        <LiveReload />
       </body>
     </html>
   );

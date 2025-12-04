@@ -78,16 +78,16 @@ export function DetailsDrawer({ isOpen, onClose, entry }: DetailsDrawerProps) {
         }}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-          <h3 className="text-lg font-semibold text-gray-900">
+        <div className="sticky top-0 bg-white border-b border-neutral-200 px-6 py-4 flex items-center justify-between z-10">
+          <h3 className="text-lg font-semibold text-neutral-900">
             Execution Details
           </h3>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded transition-colors"
+            className="p-1 hover:bg-neutral-100 rounded transition-colors"
             aria-label="Close drawer"
           >
-            <X size={20} weight="bold" className="text-gray-500" />
+            <X size={20} weight="bold" className="text-neutral-500" />
           </button>
         </div>
 
@@ -95,7 +95,7 @@ export function DetailsDrawer({ isOpen, onClose, entry }: DetailsDrawerProps) {
         <div className="p-8 space-y-8">
           {/* Script Name - Prominent */}
           <div>
-            <p className="text-xl font-semibold text-gray-900 font-mono">
+            <p className="text-xl font-semibold text-neutral-900 font-mono">
               {entry.script_name}
             </p>
           </div>
@@ -103,13 +103,13 @@ export function DetailsDrawer({ isOpen, onClose, entry }: DetailsDrawerProps) {
           {/* Key Metrics - Large, Prominent */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div>
-              <div className="text-xs text-gray-500 mb-1">Database</div>
+              <div className="text-xs text-neutral-500 mb-1">Database</div>
               <div>
                 <span
                   className={`inline-block text-sm font-semibold px-2 py-0.5 rounded ${
                     entry.target_database === "production"
-                      ? "bg-red-100 text-red-700"
-                      : "bg-blue-100 text-blue-700"
+                      ? "bg-error-100 text-error-700"
+                      : "bg-info-100 text-info-700"
                   }`}
                 >
                   {entry.target_database}
@@ -117,34 +117,42 @@ export function DetailsDrawer({ isOpen, onClose, entry }: DetailsDrawerProps) {
               </div>
             </div>
             <div>
-              <div className="text-xs text-gray-500 mb-1">Status</div>
-              <div className="flex items-center gap-1.5">
+              <div className="text-xs text-neutral-500 mb-1">Status</div>
+              <div className="flex items-center gap-2">
                 {entry.status === "success" ? (
                   <CheckCircle
-                    size={16}
-                    className="text-green-600"
-                    weight="fill"
+                    size={14}
+                    className="text-success-600"
+                    weight="duotone"
                   />
                 ) : (
-                  <XCircle size={16} className="text-red-600" weight="fill" />
+                  <XCircle
+                    size={14}
+                    className="text-error-600"
+                    weight="duotone"
+                  />
                 )}
-                <span className="text-sm font-medium text-gray-900 capitalize">
+                <span className="text-sm font-medium text-neutral-900 capitalize">
                   {entry.status}
                 </span>
               </div>
             </div>
             {entry.rows_affected !== null && (
               <div>
-                <div className="text-xs text-gray-500 mb-1">Rows Affected</div>
-                <div className="text-2xl font-bold text-gray-900">
+                <div className="text-xs text-neutral-500 mb-1">
+                  Rows Affected
+                </div>
+                <div className="text-2xl font-bold text-neutral-900">
                   {entry.rows_affected.toLocaleString()}
                 </div>
               </div>
             )}
             {entry.execution_time_ms && (
               <div>
-                <div className="text-xs text-gray-500 mb-1">Execution Time</div>
-                <div className="text-2xl font-bold text-gray-900">
+                <div className="text-xs text-neutral-500 mb-1">
+                  Execution Time
+                </div>
+                <div className="text-2xl font-bold text-neutral-900">
                   {entry.execution_time_ms}ms
                 </div>
               </div>
@@ -152,14 +160,16 @@ export function DetailsDrawer({ isOpen, onClose, entry }: DetailsDrawerProps) {
           </div>
 
           {/* Details - Subtle, Secondary */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <div className="text-xs text-gray-500 mb-1">Executed By</div>
-              <div className="text-sm text-gray-900">{entry.executed_by}</div>
+              <div className="text-xs text-neutral-500 mb-1">Executed By</div>
+              <div className="text-sm text-neutral-900">
+                {entry.executed_by}
+              </div>
             </div>
             <div>
-              <div className="text-xs text-gray-500 mb-1">Executed At</div>
-              <div className="text-sm text-gray-900">
+              <div className="text-xs text-neutral-500 mb-1">Executed At</div>
+              <div className="text-sm text-neutral-900">
                 {new Date(entry.executed_at).toLocaleString()}
               </div>
             </div>
@@ -167,13 +177,13 @@ export function DetailsDrawer({ isOpen, onClose, entry }: DetailsDrawerProps) {
 
           {/* Approvers */}
           {approvers.length > 0 && (
-            <div className="pt-6">
-              <div className="text-xs text-gray-500 mb-2">Approved By</div>
-              <div className="flex flex-wrap gap-1.5">
+            <div>
+              <div className="text-xs text-neutral-500 mb-2">Approved By</div>
+              <div className="flex flex-wrap gap-2">
                 {approvers.map((approver: string, idx: number) => (
                   <span
                     key={idx}
-                    className="text-xs px-2 py-0.5 bg-gray-100 text-gray-700 rounded"
+                    className="text-xs px-2 py-0.5 bg-neutral-100 text-neutral-800 rounded"
                   >
                     {approver}
                   </span>
@@ -184,20 +194,20 @@ export function DetailsDrawer({ isOpen, onClose, entry }: DetailsDrawerProps) {
 
           {/* Error Message */}
           {entry.error_message && (
-            <div className="pt-6">
-              <div className="bg-red-50 rounded p-4">
-                <div className="text-xs font-medium text-red-900 mb-1">
+            <div>
+              <div className="bg-error-50 rounded p-4">
+                <div className="text-xs font-medium text-error-900 mb-1">
                   Error
                 </div>
-                <p className="text-sm text-red-700">{entry.error_message}</p>
+                <p className="text-sm text-error-700">{entry.error_message}</p>
               </div>
             </div>
           )}
 
           {/* SQL Script */}
-          <div className="pt-6">
-            <div className="text-xs text-gray-500 mb-2">SQL Script</div>
-            <pre className="text-xs bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto font-mono">
+          <div>
+            <div className="text-xs text-neutral-500 mb-2">SQL Script</div>
+            <pre className="text-xs bg-neutral-900 text-neutral-100 p-4 rounded-lg overflow-x-auto font-mono">
               {entry.script_content}
             </pre>
           </div>
@@ -214,15 +224,17 @@ export function DetailsDrawer({ isOpen, onClose, entry }: DetailsDrawerProps) {
               const firstRow = resultData[0];
               const columns = Object.keys(firstRow);
               return (
-                <div className="pt-6">
+                <div>
                   <div className="flex items-baseline justify-between mb-3">
-                    <div className="text-xs text-gray-500">Query Results</div>
-                    <div className="text-xs text-gray-400">
+                    <div className="text-xs text-neutral-500">
+                      Query Results
+                    </div>
+                    <div className="text-xs text-neutral-400">
                       {resultData.length} row
                       {resultData.length !== 1 ? "s" : ""}
                     </div>
                   </div>
-                  <div className="overflow-x-auto max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
+                  <div className="overflow-x-auto max-h-96 overflow-y-auto border border-neutral-200 rounded-lg">
                     <Table>
                       <TableHeader>
                         {columns.map((col) => (
@@ -238,11 +250,11 @@ export function DetailsDrawer({ isOpen, onClose, entry }: DetailsDrawerProps) {
                                 className="font-mono text-xs"
                               >
                                 {row[col] !== null && row[col] !== undefined ? (
-                                  <span className="text-gray-900">
+                                  <span className="text-neutral-900">
                                     {String(row[col])}
                                   </span>
                                 ) : (
-                                  <span className="text-gray-400 italic">
+                                  <span className="text-neutral-400 italic">
                                     NULL
                                   </span>
                                 )}
@@ -261,12 +273,12 @@ export function DetailsDrawer({ isOpen, onClose, entry }: DetailsDrawerProps) {
 
           {/* GitHub PR Link */}
           {entry.github_pr_url && (
-            <div className="pt-6">
+            <div>
               <a
                 href={entry.github_pr_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-gray-600 hover:text-gray-900"
+                className="text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline"
               >
                 View GitHub PR →
               </a>

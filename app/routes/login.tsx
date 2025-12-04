@@ -21,24 +21,25 @@ export default function Login() {
       <style>{`
         body {
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+          background-attachment: fixed !important;
         }
         header {
           display: none !important;
         }
-        main.container {
+        main {
           padding: 0 !important;
           max-width: 100% !important;
           margin: 0 !important;
         }
       `}</style>
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-8 p-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800">Git for SQL</h1>
+            <h1 className="text-3xl font-bold text-neutral-900">Git for SQL</h1>
           </div>
 
           {error && (
-            <div className="p-3 bg-red-50 border border-red-300 rounded-md mb-4 text-red-800 text-sm">
+            <div className="p-4 bg-error-50 border border-error-300 rounded-md mb-4 text-error-800 text-sm">
               Authentication failed. Please try again.
             </div>
           )}
@@ -46,7 +47,7 @@ export default function Login() {
           <Form method="get" action="/auth/github">
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 text-base px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors"
+              className="w-full flex items-center justify-center gap-2 text-base px-4 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-md transition-colors"
             >
               <svg
                 width="20"

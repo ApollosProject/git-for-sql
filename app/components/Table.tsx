@@ -22,7 +22,7 @@ interface TableHeaderProps {
 export function TableHeader({ children }: TableHeaderProps) {
   return (
     <thead>
-      <tr className="bg-gray-50 border-b border-gray-200">{children}</tr>
+      <tr className="bg-neutral-50 border-b border-neutral-200">{children}</tr>
     </thead>
   );
 }
@@ -38,7 +38,7 @@ export function TableHeaderCell({
 }: TableHeaderCellProps) {
   return (
     <th
-      className={`px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider ${className}`}
+      className={`px-4 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider ${className}`}
     >
       {children}
     </th>
@@ -62,7 +62,7 @@ interface TableRowProps {
 export function TableRow({ children, className = "", onClick }: TableRowProps) {
   return (
     <tr
-      className={`border-b border-gray-200 hover:bg-gray-50 transition-colors last:border-b-0 ${
+      className={`border-b border-neutral-200 hover:bg-neutral-50 transition-colors last:border-b-0 ${
         onClick ? "cursor-pointer" : ""
       } ${className}`}
       onClick={onClick}
@@ -85,7 +85,7 @@ export function TableCell({
 }: TableCellProps) {
   return (
     <td
-      className={`px-4 py-3 text-sm text-gray-900 ${className}`}
+      className={`px-4 py-3 text-sm text-neutral-900 ${className}`}
       colSpan={colSpan}
     >
       {children}

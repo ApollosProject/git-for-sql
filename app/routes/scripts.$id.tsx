@@ -214,66 +214,132 @@ export default function ScriptDetail() {
 
   return (
     <div>
-      <div className="mb-8">
+      <div className="mb-4">
         <a
           href="/"
-          className="text-blue-600 hover:text-blue-800 no-underline text-sm"
+          className="text-primary-600 hover:text-primary-700 hover:underline text-sm font-medium"
         >
           ← Back to Dashboard
         </a>
       </div>
 
-      <div className="card">
+      <div className="bg-white border border-neutral-200 rounded-lg p-6 mb-4">
         <h2 className="text-2xl font-bold mb-4">{script.script_name}</h2>
 
-        {/* Status Badges */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          {stagingExecuted && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-900">
-              <Check size={14} weight="bold" />
-              Staging Executed
-            </span>
+        {/* Status Badges and Execution Buttons - Grouped Together */}
+        <div className="mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
+            {/* Status Badges - Left Side */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Primary Status Badge - Larger and More Prominent */}
+              {productionExecuted && (
+                <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold bg-success-100 text-success-900">
+                  <Check size={16} weight="regular" />
+                  Production Executed
+                </span>
+              )}
+              {!productionExecuted && stagingExecuted && (
+                <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold bg-info-100 text-info-900">
+                  <CheckCircle size={16} weight="regular" />
+                  Ready for Production
+                </span>
+              )}
+              {!stagingExecuted && !productionExecuted && (
+                <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold bg-warning-100 text-warning-900">
+                  <Clock size={16} weight="regular" />
+                  Ready for Staging Execution
+                </span>
+              )}
+
+              {/* Secondary Status Badges - Smaller */}
+              {stagingExecuted && !productionExecuted && (
+                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-success-100 text-success-900">
+                  <Check size={14} weight="regular" />
+                  Staging Executed
+                </span>
+              )}
+              {directProd && (
+                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-warning-100 text-warning-900">
+                  <Lightning size={14} weight="regular" />
+                  Direct Production Allowed
+                </span>
+              )}
+            </div>
+
+            {/* Execution Buttons - Right Side */}
+            <div className="flex flex-wrap gap-3 items-center">
+              <button
+                onClick={() => {
+                  setTargetDatabase("staging");
+                  setShowConfirm(true);
+                }}
+                className="inline-block px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded transition-colors cursor-pointer text-sm"
+                disabled={isExecuting}
+              >
+                {isExecuting ? "Executing..." : "Execute on Staging"}
+              </button>
+              {canExecuteProduction && (
+                <button
+                  onClick={() => {
+                    setTargetDatabase("production");
+                    setShowConfirm(true);
+                  }}
+                  className="inline-block px-4 py-2 bg-white border-2 border-primary-600 text-primary-600 hover:bg-primary-50 font-medium rounded transition-colors cursor-pointer text-sm"
+                  disabled={isExecuting}
+                >
+                  {isExecuting ? "Executing..." : "Execute on Production"}
+                </button>
+              )}
+              {!canExecuteProduction && !stagingExecuted && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-warning-50 border border-warning-200 rounded-lg text-sm text-warning-900">
+                  <Warning size={16} weight="regular" />
+                  <span>
+                    Execute on staging first, or add{" "}
+                    <code className="bg-warning-100 text-warning-900 px-2 py-1 rounded text-xs font-mono font-semibold">
+                      -- DirectProd
+                    </code>{" "}
+                    flag to bypass
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Action Messages */}
+          {actionData && (
+            <div
+              className={`mb-3 p-4 rounded-lg ${
+                "success" in actionData && actionData.success
+                  ? "bg-success-50 border border-success-200 text-success-900"
+                  : "bg-error-50 border border-error-200 text-error-900"
+              }`}
+            >
+              {"success" in actionData && actionData.success
+                ? "message" in actionData
+                  ? actionData.message
+                  : "Success"
+                : `Error: ${
+                    "error" in actionData ? actionData.error : "Unknown error"
+                  }`}
+            </div>
           )}
-          {productionExecuted && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-900">
-              <Check size={14} weight="bold" />
-              Production Executed
-            </span>
-          )}
-          {!stagingExecuted && !productionExecuted && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-900">
-              <Clock size={14} weight="bold" />
-              Pending Staging Execution
-            </span>
-          )}
-          {stagingExecuted && !productionExecuted && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-900">
-              <CheckCircle size={14} weight="bold" />
-              Ready for Production
-            </span>
-          )}
-          {directProd && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-200 text-amber-900">
-              <Lightning size={14} weight="bold" />
-              Direct Production Allowed
-            </span>
-          )}
-          {approvers.length > 0 && (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
-              {approvers.length} approver{approvers.length !== 1 ? "s" : ""}
-            </span>
+
+          {isExecuting && (
+            <div className="mb-3 p-4 bg-warning-50 border border-warning-200 rounded-lg text-warning-900">
+              Executing script... Please wait.
+            </div>
           )}
         </div>
 
-        {/* Metadata Section */}
-        <div className="mb-6 space-y-3">
+        {/* Secondary Metadata - More Subtle */}
+        <div className="mb-4 space-y-2">
           {script.github_pr_url && (
             <div>
               <a
                 href={script.github_pr_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-800 no-underline text-sm font-medium"
+                className="text-primary-600 hover:text-primary-700 hover:underline text-xs font-medium"
               >
                 View GitHub PR →
               </a>
@@ -281,89 +347,21 @@ export default function ScriptDetail() {
           )}
 
           {approvers.length > 0 && (
-            <p className="text-sm text-gray-600">
-              <strong>Approved by:</strong> {approvers.join(", ")}
-            </p>
+            <p className="text-xs text-neutral-500">{approvers.join(", ")}</p>
           )}
         </div>
 
-        {/* SQL Script Section */}
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-3 text-gray-900">
-            SQL Script
-          </h3>
-          <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm">
+        {/* SQL Script Section - Removed Heading */}
+        <div className="mb-4">
+          <pre className="bg-neutral-900 text-neutral-100 p-4 rounded-lg overflow-x-auto text-sm">
             {script.script_content}
           </pre>
-        </div>
-
-        {/* Action Messages */}
-        {actionData && (
-          <div
-            className={`mb-4 p-4 rounded-lg ${
-              "success" in actionData && actionData.success
-                ? "bg-green-50 border border-green-200 text-green-900"
-                : "bg-red-50 border border-red-200 text-red-900"
-            }`}
-          >
-            {"success" in actionData && actionData.success
-              ? "message" in actionData
-                ? actionData.message
-                : "Success"
-              : `Error: ${
-                  "error" in actionData ? actionData.error : "Unknown error"
-                }`}
-          </div>
-        )}
-
-        {isExecuting && (
-          <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-900">
-            Executing script... Please wait.
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="flex flex-wrap gap-3 items-center">
-          <button
-            onClick={() => {
-              setTargetDatabase("staging");
-              setShowConfirm(true);
-            }}
-            className="btn btn-primary"
-            disabled={isExecuting}
-          >
-            {isExecuting ? "Executing..." : "Execute on Staging"}
-          </button>
-          {canExecuteProduction && (
-            <button
-              onClick={() => {
-                setTargetDatabase("production");
-                setShowConfirm(true);
-              }}
-              className="btn btn-danger"
-              disabled={isExecuting}
-            >
-              {isExecuting ? "Executing..." : "Execute on Production"}
-            </button>
-          )}
-          {!canExecuteProduction && !stagingExecuted && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-900">
-              <Warning size={16} weight="bold" />
-              <span>
-                Execute on staging first, or add{" "}
-                <code className="bg-yellow-100 px-1 rounded">
-                  -- DirectProd
-                </code>{" "}
-                flag to bypass
-              </span>
-            </div>
-          )}
         </div>
       </div>
 
       {history.length > 0 && (
-        <div className="card mt-8">
-          <h3 className="text-xl font-semibold mb-4 text-gray-900">
+        <div className="bg-white border border-neutral-200 rounded-lg p-6 mb-4 mt-6">
+          <h3 className="text-lg font-semibold mb-4 text-neutral-900">
             Execution History
           </h3>
           <Table>
@@ -391,42 +389,50 @@ export default function ScriptDetail() {
 
       {showConfirm && (
         <div
-          className="modal-overlay"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
           onClick={() => {
             setShowConfirm(false);
           }}
         >
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-xl font-bold mb-4 text-red-600 flex items-center gap-2">
-              <Warning size={24} weight="bold" />
-              Confirm Execution
-            </h3>
-
-            <p className="mb-4">
-              You are about to execute SQL against the{" "}
-              <strong
-                className={
-                  targetDatabase === "production"
-                    ? "text-red-600"
-                    : "text-blue-600"
-                }
-              >
-                {targetDatabase}
-              </strong>{" "}
-              database.
-            </p>
+          <div
+            className="bg-white rounded-lg shadow-lg max-w-2xl w-[90%] max-h-[90vh] overflow-y-auto p-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-2 text-neutral-900 flex items-center gap-2">
+                <Warning
+                  size={20}
+                  weight="regular"
+                  className="text-warning-500"
+                />
+                Confirm Execution
+              </h3>
+              <p className="text-sm text-neutral-600">
+                You are about to execute SQL against the{" "}
+                <span className="font-semibold text-neutral-900">
+                  {targetDatabase}
+                </span>{" "}
+                database.
+              </p>
+            </div>
 
             {targetDatabase === "production" &&
               !stagingExecuted &&
               directProd && (
-                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
-                  <strong className="flex items-center gap-1 text-yellow-900">
-                    <Warning size={16} weight="bold" />
-                    Direct Production Execution
-                  </strong>
-                  <p className="mt-2 text-sm text-yellow-800">
+                <div className="p-4 bg-warning-50 border border-warning-200 rounded-lg mb-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Warning
+                      size={16}
+                      weight="regular"
+                      className="text-warning-600"
+                    />
+                    <strong className="text-sm font-semibold text-warning-900">
+                      Direct Production Execution
+                    </strong>
+                  </div>
+                  <p className="text-xs text-warning-800">
                     This script has the{" "}
-                    <code className="bg-yellow-100 px-1 rounded">
+                    <code className="bg-warning-100 text-warning-900 px-2 py-1 rounded text-xs font-mono font-semibold">
                       -- DirectProd
                     </code>{" "}
                     flag, allowing direct production execution without staging.
@@ -434,21 +440,21 @@ export default function ScriptDetail() {
                 </div>
               )}
 
-            <div className="bg-gray-50 p-4 rounded-lg mb-4">
-              <p className="text-sm font-semibold mb-2 text-gray-900">
-                Script: {script.script_name}
+            <div className="bg-neutral-50 p-4 rounded-lg mb-6">
+              <p className="text-xs font-medium mb-2 text-neutral-600">
+                {script.script_name}
               </p>
-              <pre className="text-xs bg-gray-900 text-gray-100 p-3 rounded overflow-x-auto">
+              <pre className="text-xs bg-neutral-900 text-neutral-100 p-4 rounded overflow-x-auto max-h-64 overflow-y-auto">
                 {script.script_content}
               </pre>
             </div>
 
             <Form method="post">
-              <p className="mb-4 text-sm text-gray-600">
+              <p className="mb-6 text-xs text-neutral-500">
                 This action will be logged in the audit trail as{" "}
-                <strong className="text-gray-900">
+                <span className="font-medium text-neutral-700">
                   {user?.email || user?.username || "you"}
-                </strong>
+                </span>
                 .
               </p>
 
@@ -458,23 +464,19 @@ export default function ScriptDetail() {
                 value={targetDatabase}
               />
 
-              <div className="flex gap-2 justify-end">
+              <div className="flex gap-3 justify-end">
                 <button
                   type="button"
                   onClick={() => {
                     setShowConfirm(false);
                   }}
-                  className="btn btn-secondary"
+                  className="px-4 py-2 bg-neutral-200 hover:bg-neutral-300 text-neutral-700 font-medium rounded transition-colors text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className={`btn ${
-                    targetDatabase === "production"
-                      ? "btn-danger"
-                      : "btn-primary"
-                  }`}
+                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded transition-colors text-sm"
                 >
                   Yes, Execute on {targetDatabase}
                 </button>
@@ -534,7 +536,7 @@ function ExecutionHistoryRow({
     // SELECT query with rows but no results captured (likely executed before feature was added)
     resultDisplay = (
       <span
-        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200"
+        className="inline-flex items-center gap-2 px-3 py-1 rounded-md text-xs font-medium bg-warning-50 text-warning-700 border border-warning-200"
         title="This SELECT query returned rows, but results weren't captured (likely executed before result capture feature was added). Re-execute to see results."
       >
         <Warning size={14} weight="bold" />
@@ -545,11 +547,11 @@ function ExecutionHistoryRow({
     // DDL/DML query - no results expected
     resultDisplay = (
       <span
-        className="inline-flex items-center gap-1.5 text-gray-500 text-sm"
+        className="inline-flex items-center gap-2 text-neutral-500 text-sm"
         title="Results are only available for SELECT queries. DDL/DML queries show row count in 'Rows Affected' column."
       >
         N/A
-        <Info size={14} weight="regular" className="text-gray-400" />
+        <Info size={14} weight="regular" className="text-neutral-400" />
       </span>
     );
   }
@@ -560,10 +562,10 @@ function ExecutionHistoryRow({
         <TableCell>{entry.executed_by}</TableCell>
         <TableCell>
           <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
               entry.target_database === "production"
-                ? "bg-red-100 text-red-900"
-                : "bg-blue-100 text-blue-900"
+                ? "bg-error-100 text-error-900"
+                : "bg-info-100 text-info-900"
             }`}
           >
             {entry.target_database}
@@ -571,19 +573,19 @@ function ExecutionHistoryRow({
         </TableCell>
         <TableCell>
           <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
               entry.status === "success"
-                ? "bg-green-100 text-green-900"
-                : "bg-red-100 text-red-900"
+                ? "bg-success-100 text-success-900"
+                : "bg-error-100 text-error-900"
             }`}
           >
             {entry.status}
           </span>
         </TableCell>
-        <TableCell className="text-gray-700">
+        <TableCell className="text-neutral-700">
           {entry.rows_affected !== null ? entry.rows_affected : "N/A"}
         </TableCell>
-        <TableCell className="text-gray-600">
+        <TableCell className="text-neutral-600">
           {entry.execution_time_ms ? `${entry.execution_time_ms}ms` : "N/A"}
         </TableCell>
         <TableCell className="text-sm text-gray-600">
@@ -599,10 +601,10 @@ function ExecutionHistoryRow({
       <TableCell>{entry.executed_by}</TableCell>
       <TableCell>
         <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
             entry.target_database === "production"
-              ? "bg-red-100 text-red-900"
-              : "bg-blue-100 text-blue-900"
+              ? "bg-error-100 text-error-900"
+              : "bg-info-100 text-info-900"
           }`}
         >
           {entry.target_database}
@@ -610,10 +612,10 @@ function ExecutionHistoryRow({
       </TableCell>
       <TableCell>
         <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
             entry.status === "success"
-              ? "bg-green-100 text-green-900"
-              : "bg-red-100 text-red-900"
+              ? "bg-success-100 text-success-900"
+              : "bg-error-100 text-error-900"
           }`}
         >
           {entry.status}
@@ -632,7 +634,7 @@ function ExecutionHistoryRow({
         {resultDisplay || (
           <button
             onClick={() => onOpenDetails(entry)}
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
+            className="text-primary-600 hover:text-primary-700 hover:underline text-sm font-medium"
           >
             Details
           </button>

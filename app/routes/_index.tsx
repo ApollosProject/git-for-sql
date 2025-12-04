@@ -155,38 +155,42 @@ export default function Index() {
     <div>
       <div className="mb-6">
         <h2 className="text-2xl font-bold mb-2">Approved SQL Scripts</h2>
-        <p className="text-gray-500 text-sm">
+        <p className="text-neutral-500 text-sm">
           All scripts must be executed in staging first, then can be promoted to
           production. Add{" "}
-          <code className="bg-gray-100 px-1 rounded">-- DirectProd</code> in
-          script comments to bypass staging requirement.
+          <code className="bg-warning-100 text-warning-900 px-2 py-1 rounded text-xs font-mono font-semibold">
+            -- DirectProd
+          </code>{" "}
+          in script comments to bypass staging requirement.
         </p>
       </div>
 
       {totalScripts === 0 && openPRs.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <p className="text-gray-500">No scripts available</p>
+        <div className="bg-white border border-neutral-200 rounded-lg p-6">
+          <p className="text-neutral-500">No scripts available</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* In Review Column */}
-          <div className="bg-gray-50 rounded-lg p-4 flex flex-col max-h-[calc(100vh-250px)]">
-            <div className="flex items-center gap-2 mb-4 flex-shrink-0">
+          <div className="flex flex-col max-h-[calc(100vh-250px)]">
+            <div className="flex items-center gap-2 mb-6 flex-shrink-0">
               <MagnifyingGlass
                 size={20}
-                weight="bold"
+                weight="regular"
                 className="text-purple-500"
               />
-              <h3 className="text-lg font-semibold text-gray-800">In Review</h3>
-              <span className="bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-1 rounded-full">
+              <h3 className="text-lg font-semibold text-neutral-900">
+                In Review
+              </h3>
+              <span className="bg-purple-100 text-purple-900 text-xs font-semibold px-2 py-1 rounded-full">
                 {openPRs.length}
               </span>
             </div>
-            <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-1">
+            <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
               {openPRs.length > 0 ? (
                 openPRs.map((pr) => <PRCard key={pr.prNumber} pr={pr} />)
               ) : (
-                <div className="text-gray-400 text-sm text-center py-8">
+                <div className="text-neutral-400 text-sm text-center py-8">
                   No open PRs
                 </div>
               )}
@@ -194,23 +198,27 @@ export default function Index() {
           </div>
 
           {/* Pending Staging Column */}
-          <div className="bg-gray-50 rounded-lg p-4 flex flex-col max-h-[calc(100vh-250px)]">
-            <div className="flex items-center gap-2 mb-4 flex-shrink-0">
-              <Clock size={20} weight="bold" className="text-amber-500" />
-              <h3 className="text-lg font-semibold text-gray-800">
-                Pending Staging
+          <div className="flex flex-col max-h-[calc(100vh-250px)]">
+            <div className="flex items-center gap-2 mb-6 flex-shrink-0">
+              <Clock size={20} weight="regular" className="text-warning-500" />
+              <h3 className="text-lg font-semibold text-neutral-900">
+                Ready for Staging
               </h3>
-              <span className="bg-amber-100 text-amber-800 text-xs font-semibold px-2 py-1 rounded-full">
+              <span className="bg-warning-100 text-warning-900 text-xs font-semibold px-2 py-1 rounded-full">
                 {pending.length}
               </span>
             </div>
-            <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-1">
+            <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
               {pending.length > 0 ? (
                 pending.map((script) => (
-                  <KanbanCard key={script.id} script={script} />
+                  <KanbanCard
+                    key={script.id}
+                    script={script}
+                    hoverBorderColor="warning-400"
+                  />
                 ))
               ) : (
-                <div className="text-gray-400 text-sm text-center py-8">
+                <div className="text-neutral-400 text-sm text-center py-8">
                   No scripts pending
                 </div>
               )}
@@ -218,23 +226,31 @@ export default function Index() {
           </div>
 
           {/* Ready for Production Column */}
-          <div className="bg-gray-50 rounded-lg p-4 flex flex-col max-h-[calc(100vh-250px)]">
-            <div className="flex items-center gap-2 mb-4 flex-shrink-0">
-              <CheckCircle size={20} weight="bold" className="text-blue-500" />
-              <h3 className="text-lg font-semibold text-gray-800">
-                Ready for Prod
+          <div className="flex flex-col max-h-[calc(100vh-250px)]">
+            <div className="flex items-center gap-2 mb-6 flex-shrink-0">
+              <CheckCircle
+                size={20}
+                weight="regular"
+                className="text-info-500"
+              />
+              <h3 className="text-lg font-semibold text-neutral-900">
+                Ready for Production
               </h3>
-              <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full">
+              <span className="bg-info-100 text-info-900 text-xs font-semibold px-2 py-1 rounded-full">
                 {readyForProd.length}
               </span>
             </div>
-            <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-1">
+            <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
               {readyForProd.length > 0 ? (
                 readyForProd.map((script) => (
-                  <KanbanCard key={script.id} script={script} />
+                  <KanbanCard
+                    key={script.id}
+                    script={script}
+                    hoverBorderColor="info-400"
+                  />
                 ))
               ) : (
-                <div className="text-gray-400 text-sm text-center py-8">
+                <div className="text-neutral-400 text-sm text-center py-8">
                   No scripts ready
                 </div>
               )}
@@ -242,21 +258,27 @@ export default function Index() {
           </div>
 
           {/* Completed Column */}
-          <div className="bg-gray-50 rounded-lg p-4 flex flex-col max-h-[calc(100vh-250px)]">
-            <div className="flex items-center gap-2 mb-4 flex-shrink-0">
-              <Check size={20} weight="bold" className="text-green-500" />
-              <h3 className="text-lg font-semibold text-gray-800">Completed</h3>
-              <span className="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded-full">
+          <div className="flex flex-col max-h-[calc(100vh-250px)]">
+            <div className="flex items-center gap-2 mb-6 flex-shrink-0">
+              <Check size={20} weight="regular" className="text-success-500" />
+              <h3 className="text-lg font-semibold text-neutral-900">
+                Completed
+              </h3>
+              <span className="bg-success-100 text-success-900 text-xs font-semibold px-2 py-1 rounded-full">
                 {completed.length}
               </span>
             </div>
-            <div className="space-y-3 overflow-y-auto flex-1 min-h-0 pr-1">
+            <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
               {completed.length > 0 ? (
                 completed.map((script) => (
-                  <KanbanCard key={script.id} script={script} />
+                  <KanbanCard
+                    key={script.id}
+                    script={script}
+                    hoverBorderColor="success-400"
+                  />
                 ))
               ) : (
-                <div className="text-gray-400 text-sm text-center py-8">
+                <div className="text-neutral-400 text-sm text-center py-8">
                   No scripts completed
                 </div>
               )}
@@ -292,36 +314,42 @@ function PRCard({ pr }: { pr: any }) {
       href={pr.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md hover:border-purple-300 transition-all cursor-pointer no-underline"
+      className="block bg-white border border-neutral-200 rounded-lg p-4 hover:shadow-md hover:border-purple-400 transition-all cursor-pointer no-underline"
     >
-      <h4 className="text-sm font-semibold text-gray-800 mb-2 line-clamp-2">
+      <h4 className="text-sm font-semibold text-neutral-900 mb-2 line-clamp-2">
         {pr.title}
       </h4>
 
-      <div className="flex flex-wrap gap-1.5 mb-2">
+      <div className="flex flex-wrap gap-2 mb-2">
         <span className="inline-block px-2 py-0.5 rounded text-xs font-semibold bg-purple-100 text-purple-900">
           PR #{pr.prNumber}
         </span>
       </div>
 
-      <div className="flex items-center justify-between text-xs text-gray-500">
-        <span className="flex items-center gap-1">
-          <User size={12} weight="regular" />
-          {pr.author}
-        </span>
+      <div className="flex items-center justify-between text-xs text-neutral-500">
         {pr.createdAt && (
           <span className="flex items-center gap-1">
             <Calendar size={12} weight="regular" />
             {formatRelativeTime(pr.createdAt)}
           </span>
         )}
+        <span className="flex items-center gap-1">
+          <User size={12} weight="regular" />
+          {pr.author}
+        </span>
       </div>
     </a>
   );
 }
 
 // Compact Kanban Card Component
-function KanbanCard({ script }: { script: any }) {
+function KanbanCard({
+  script,
+  hoverBorderColor = "primary-400",
+}: {
+  script: any;
+  hoverBorderColor?: string;
+}) {
   const approvers = Array.isArray(script.approvers)
     ? script.approvers
     : script.approvers
@@ -351,20 +379,20 @@ function KanbanCard({ script }: { script: any }) {
       return {
         text: "Production",
         icon: <Check size={12} weight="bold" className="inline" />,
-        color: "bg-green-100 text-green-900",
+        color: "bg-success-100 text-success-900",
       };
     }
     if (script.staging_executed) {
       return {
         text: "Staging",
         icon: <Check size={12} weight="bold" className="inline" />,
-        color: "bg-green-100 text-green-900",
+        color: "bg-success-100 text-success-900",
       };
     }
     return {
-      text: "Pending",
+      text: "Ready",
       icon: <Clock size={12} weight="bold" className="inline" />,
-      color: "bg-yellow-100 text-yellow-900",
+      color: "bg-warning-100 text-warning-900",
     };
   };
 
@@ -372,16 +400,25 @@ function KanbanCard({ script }: { script: any }) {
   const hasErrors = script.hasErrors;
   const executionCount = script.executionCount || 0;
 
+  // Map hover border color to Tailwind class
+  const hoverBorderClass =
+    {
+      "warning-400": "hover:border-warning-400",
+      "info-400": "hover:border-info-400",
+      "success-400": "hover:border-success-400",
+      "primary-400": "hover:border-primary-400",
+    }[hoverBorderColor] || "hover:border-primary-400";
+
   return (
     <a
       href={`/scripts/${script.id}`}
-      className="block bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer no-underline"
+      className={`block bg-white border border-neutral-200 rounded-lg p-4 hover:shadow-md ${hoverBorderClass} transition-all cursor-pointer no-underline`}
     >
-      <h4 className="text-sm font-semibold text-gray-800 mb-2 truncate">
+      <h4 className="text-sm font-semibold text-neutral-900 mb-2 truncate">
         {script.script_name}
       </h4>
 
-      <div className="flex flex-wrap gap-1.5 mb-2">
+      <div className="flex flex-wrap gap-2 mb-2">
         <span
           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold ${primaryStatus.color}`}
         >
@@ -390,28 +427,28 @@ function KanbanCard({ script }: { script: any }) {
         </span>
 
         {script.direct_prod && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-amber-200 text-amber-900">
-            <Lightning size={12} weight="bold" />
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-warning-100 text-warning-900">
+            <Lightning size={12} weight="regular" />
             DirectProd
           </span>
         )}
 
         {hasErrors && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-900">
-            <Warning size={12} weight="bold" />
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-error-100 text-error-900">
+            <Warning size={12} weight="regular" />
             Errors
           </span>
         )}
 
         {executionCount > 0 && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-700">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-neutral-100 text-neutral-800">
             <ArrowClockwise size={12} weight="regular" />
             {executionCount}x
           </span>
         )}
       </div>
 
-      <div className="flex items-center justify-between text-xs text-gray-500">
+      <div className="flex items-center justify-between text-xs text-neutral-500">
         {script.approved_at && (
           <span className="flex items-center gap-1">
             <Calendar size={12} weight="regular" />
@@ -463,7 +500,7 @@ function ScriptCard({ script }: { script: any }) {
             {/* Execution Status Badges */}
             {script.staging_executed && (
               <span
-                className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-900"
+                className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-success-100 text-success-900"
                 title={
                   script.staging_executed_at
                     ? `Staging executed ${formatRelativeTime(
@@ -478,7 +515,7 @@ function ScriptCard({ script }: { script: any }) {
             )}
             {script.production_executed && (
               <span
-                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-900"
+                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-success-100 text-success-900"
                 title={
                   script.production_executed_at
                     ? `Production executed ${formatRelativeTime(
@@ -492,13 +529,13 @@ function ScriptCard({ script }: { script: any }) {
               </span>
             )}
             {!script.staging_executed && !script.production_executed && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-900">
-                <Clock size={12} weight="bold" className="inline mr-1" />
-                Pending Staging
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-warning-100 text-warning-900">
+                <Clock size={12} weight="regular" className="inline mr-1" />
+                Ready
               </span>
             )}
             {script.staging_executed && !script.production_executed && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-900">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-info-100 text-info-900">
                 <CheckCircle size={12} weight="bold" className="inline mr-1" />
                 Ready for Prod
               </span>
@@ -507,7 +544,7 @@ function ScriptCard({ script }: { script: any }) {
             {/* Feature Flags */}
             {script.direct_prod && (
               <span
-                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-200 text-amber-900"
+                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-warning-100 text-warning-900"
                 title="Can execute directly on production"
               >
                 <Lightning size={12} weight="bold" className="inline mr-1" />
@@ -518,7 +555,7 @@ function ScriptCard({ script }: { script: any }) {
             {/* Approval Info */}
             {approvers.length > 0 && (
               <span
-                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-900"
+                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-primary-100 text-primary-900"
                 title={`Approved by: ${approvers.join(", ")}`}
               >
                 <User size={12} weight="regular" className="inline mr-1" />
@@ -530,7 +567,7 @@ function ScriptCard({ script }: { script: any }) {
             {/* Execution Stats */}
             {script.executionCount > 0 && (
               <span
-                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700"
+                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-800"
                 title={`Executed ${script.executionCount} time${
                   script.executionCount !== 1 ? "s" : ""
                 }`}
@@ -547,7 +584,7 @@ function ScriptCard({ script }: { script: any }) {
             {/* Error Indicator */}
             {script.hasErrors && (
               <span
-                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-900"
+                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-error-100 text-error-900"
                 title="Has execution errors"
               >
                 <Warning size={12} weight="bold" className="inline mr-1" />
@@ -558,7 +595,7 @@ function ScriptCard({ script }: { script: any }) {
             {/* Last Execution Info */}
             {script.lastExecutedAt && (
               <span
-                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-900"
+                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-warning-100 text-warning-900"
                 title={`Last executed ${formatRelativeTime(
                   script.lastExecutedAt
                 )} by ${script.lastExecutedBy}`}
@@ -571,7 +608,7 @@ function ScriptCard({ script }: { script: any }) {
             {/* Approved Date */}
             {script.approved_at && (
               <span
-                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-900"
+                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-success-100 text-success-900"
                 title={`Approved ${formatRelativeTime(script.approved_at)}`}
               >
                 <Calendar size={12} weight="regular" className="inline mr-1" />
@@ -584,7 +621,7 @@ function ScriptCard({ script }: { script: any }) {
               href={script.github_pr_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 text-sm no-underline hover:underline"
+              className="text-primary-600 hover:text-primary-700 text-sm font-medium hover:underline"
             >
               View PR →
             </a>
@@ -593,7 +630,7 @@ function ScriptCard({ script }: { script: any }) {
         <div className="flex gap-2">
           <a
             href={`/scripts/${script.id}`}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded transition-colors no-underline"
+            className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded transition-colors no-underline"
           >
             View Details
           </a>
@@ -601,16 +638,16 @@ function ScriptCard({ script }: { script: any }) {
       </div>
 
       <details>
-        <summary className="cursor-pointer text-gray-500 text-sm mb-2">
+        <summary className="cursor-pointer text-neutral-500 text-sm mb-2">
           Show SQL
         </summary>
-        <pre className="mt-2 text-xs bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto">
+        <pre className="mt-2 text-xs bg-neutral-900 text-neutral-100 p-4 rounded overflow-x-auto">
           {script.script_content}
         </pre>
       </details>
 
       {approvers.length > 0 && (
-        <div className="mt-3 text-sm text-gray-500">
+        <div className="mt-3 text-sm text-neutral-500">
           <strong>Approved by:</strong> {approvers.join(", ")}
         </div>
       )}

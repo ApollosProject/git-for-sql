@@ -36,8 +36,11 @@ export async function fetchScriptFromGitHub(
     }
 
     return null;
-  } catch (error) {
-    console.error("Error fetching script from GitHub:", error);
+  } catch (error: any) {
+    // Don't log 404 errors - they're expected for deleted files
+    if (error?.status !== 404) {
+      console.error("Error fetching script from GitHub:", error);
+    }
     return null;
   }
 }
@@ -140,9 +143,7 @@ export async function getOpenPRsWithSQL(): Promise<
       }
     }
 
-    console.log(
-      `[OpenPRs] Found ${prsWithSQL.length} open PR(s) with SQL files`
-    );
+    // Open PRs logged silently - only log on errors
     return prsWithSQL;
   } catch (error) {
     console.error("[OpenPRs] Error fetching open PRs with SQL:", error);
@@ -273,15 +274,16 @@ export async function syncScriptsFromGitHub(
   getExistingScriptNames: () => Promise<string[]>,
   minApprovals: number
 ): Promise<{ synced: number; skipped: number; errors: number }> {
-  console.log("[Sync] Starting sync from GitHub...");
+  console.log("🔄 [Sync] Starting sync from GitHub...");
 
   const stats = { synced: 0, skipped: 0, errors: 0 };
   const existingScripts = await getExistingScriptNames();
   const existingSet = new Set(existingScripts);
+  const skippedReasons: { [key: string]: number } = {};
 
   // Get merged PRs
   const mergedPRs = await getMergedPRs(50);
-  console.log(`[Sync] Found ${mergedPRs.length} merged PRs to check`);
+  console.log(`   Checking ${mergedPRs.length} merged PR(s)...`);
 
   for (const pr of mergedPRs) {
     try {
@@ -289,9 +291,8 @@ export async function syncScriptsFromGitHub(
       const approvers = await getPRApprovers(pr.number);
 
       if (approvers.length < minApprovals) {
-        console.log(
-          `[Sync] PR #${pr.number} has ${approvers.length} approvals (need ${minApprovals}), skipping`
-        );
+        skippedReasons["insufficient_approvals"] =
+          (skippedReasons["insufficient_approvals"] || 0) + 1;
         stats.skipped++;
         continue;
       }
@@ -315,6 +316,8 @@ export async function syncScriptsFromGitHub(
       });
 
       if (sqlFiles.length === 0) {
+        skippedReasons["no_sql_files"] =
+          (skippedReasons["no_sql_files"] || 0) + 1;
         stats.skipped++;
         continue;
       }
@@ -325,17 +328,36 @@ export async function syncScriptsFromGitHub(
 
         // Skip if script already exists
         if (existingSet.has(scriptName)) {
-          console.log(`[Sync] Script ${scriptName} already exists, skipping`);
+          skippedReasons["already_exists"] =
+            (skippedReasons["already_exists"] || 0) + 1;
           stats.skipped++;
           continue;
         }
 
         // Fetch the file content first to parse metadata
-        const content = await fetchScriptFromGitHub(file.filename);
+        let content: string | null;
+        try {
+          content = await fetchScriptFromGitHub(file.filename);
+        } catch (error: any) {
+          // Handle deleted files gracefully - they may have been deleted after PR merge
+          if (error?.status === 404 || error?.message?.includes("404")) {
+            skippedReasons["file_deleted"] =
+              (skippedReasons["file_deleted"] || 0) + 1;
+            stats.skipped++;
+          } else {
+            console.error(
+              `   ❌ Error fetching ${scriptName}:`,
+              error?.message || "Unknown error"
+            );
+            stats.errors++;
+          }
+          continue;
+        }
 
         if (!content) {
-          console.log(`[Sync] Failed to fetch content for ${file.filename}`);
-          stats.errors++;
+          skippedReasons["no_content"] =
+            (skippedReasons["no_content"] || 0) + 1;
+          stats.skipped++;
           continue;
         }
 
@@ -359,23 +381,44 @@ export async function syncScriptsFromGitHub(
         });
 
         if (success) {
+          const directProdFlag = directProd ? " (DirectProd)" : "";
           console.log(
-            `[Sync] ✓ Synced script: ${scriptName} from PR #${pr.number} (directProd: ${directProd})`
+            `   ✓ Synced: ${scriptName} from PR #${pr.number}${directProdFlag}`
           );
           stats.synced++;
           existingSet.add(scriptName); // Add to set to avoid duplicates in same sync
         } else {
+          console.error(`   ❌ Failed to add: ${scriptName}`);
           stats.errors++;
         }
       }
     } catch (error) {
-      console.error(`[Sync] Error processing PR #${pr.number}:`, error);
+      console.error(`   ❌ Error processing PR #${pr.number}:`, error);
       stats.errors++;
     }
   }
 
-  console.log(
-    `[Sync] Complete: ${stats.synced} synced, ${stats.skipped} skipped, ${stats.errors} errors`
-  );
+  // Summary
+  console.log(`\n✅ [Sync] Complete:`);
+  console.log(`   Synced: ${stats.synced}`);
+  console.log(`   Skipped: ${stats.skipped}`);
+  if (Object.keys(skippedReasons).length > 0) {
+    const reasons = Object.entries(skippedReasons)
+      .map(([reason, count]) => {
+        const labels: { [key: string]: string } = {
+          insufficient_approvals: "insufficient approvals",
+          no_sql_files: "no SQL files",
+          already_exists: "already exists",
+          file_deleted: "file deleted",
+          no_content: "no content",
+        };
+        return `${labels[reason] || reason}: ${count}`;
+      })
+      .join(", ");
+    console.log(`   Reasons: ${reasons}`);
+  }
+  if (stats.errors > 0) {
+    console.log(`   Errors: ${stats.errors}`);
+  }
   return stats;
 }

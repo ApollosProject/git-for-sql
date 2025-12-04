@@ -1,352 +1,172 @@
-# Git for SQL - POC
+# Git for SQL
 
-A peer-reviewed SQL execution tool with GitHub integration and comprehensive audit logging.
+Peer-reviewed SQL execution tool with GitHub integration and audit logging.
 
-## Features
-
-- ✅ **Peer Review via GitHub** - Requires 2+ approvals on PRs before scripts become available
-- ✅ **Staging-First Workflow** - Scripts must run in staging first, then can be promoted to production
-- ✅ **On-Demand Execution** - Run approved SQL when YOU want, not tied to deployments
-- ✅ **Full Audit Trail** - Immutable log of every execution with user, timestamp, and results
-- ✅ **Result Capture** - SELECT queries display returned rows in execution history
-- ✅ **Multi-Environment** - Support for staging and production databases
-- ✅ **Safety Confirmations** - Double-confirmation before executing SQL with audit trail
-- ✅ **GitHub Webhook Integration** - Auto-sync approved scripts from merged PRs
-- ✅ **Auto-Refresh Dashboard** - Automatically polls for new scripts every 30 seconds
-- ✅ **DirectProd Flag** - Option to bypass staging requirement for specific scripts
-- ✅ **Configurable Folder Watching** - Watch a specific folder in any repo (e.g., `migrations/sql/`)
-- ✅ **GitHub OAuth** - Optional sign-in for user identification and auto-fill
-
-## Architecture
-
-```
-┌─────────────┐      ┌─────────────┐      ┌─────────────┐
-│   GitHub    │      │  Remix App  │      │  PostgreSQL │
-│  SQL Repo   │─────▶│  Web UI +   │─────▶│  Databases  │
-│   + PRs     │      │  Webhooks   │      │ Staging/Prod│
-└─────────────┘      └─────────────┘      └─────────────┘
-                            │
-                            ▼
-                     ┌─────────────┐
-                     │   Audit DB  │
-                     │  (Postgres) │
-                     └─────────────┘
-```
-
-## Prerequisites
-
-- Node.js 18+
-- PostgreSQL databases (staging, production, and audit)
-- GitHub repository for SQL scripts
-- GitHub personal access token
-
-## Setup
-
-### 1. Install Dependencies
+## Quick Start
 
 ```bash
+# Install dependencies
 yarn install
-```
 
-### 2. Configure Environment Variables
+# Run setup (creates databases, .env file, generates secrets)
+yarn setup
 
-Create a `.env` file in the project root:
-
-```bash
-# Database URLs
-STAGING_DB_URL=postgresql://user:password@localhost:5432/staging_db
-PROD_DB_URL=postgresql://user:password@localhost:5432/prod_db
-AUDIT_DB_URL=postgresql://user:password@localhost:5432/audit_db
-
-# GitHub Configuration
-GITHUB_TOKEN=ghp_your_token_here
-GITHUB_REPO=org/sql-scripts
-GITHUB_WEBHOOK_SECRET=your_webhook_secret_here
-GITHUB_SQL_FOLDER=sql/  # Optional: folder to watch (e.g., sql/, migrations/sql/, db/). Leave empty to watch entire repo
-
-# GitHub OAuth (optional - for user identification)
-GITHUB_OAUTH_CLIENT_ID=your_oauth_client_id
-GITHUB_OAUTH_CLIENT_SECRET=your_oauth_client_secret
-GITHUB_OAUTH_CALLBACK_URL=http://localhost:3000/auth/github/callback
-
-# Session Configuration
-SESSION_SECRET=your_session_secret_here
-
-# Minimum required approvals
-MIN_APPROVALS=2
-```
-
-### 3. Initialize the Audit Database
-
-The audit database schema will be automatically created on first run. Ensure your `AUDIT_DB_URL` is correct and the database exists.
-
-### 4. Set Up GitHub Repository
-
-**Option A: Dedicated SQL Scripts Repository**
-
-Create a GitHub repository with a simple flat structure:
-
-```
-sql-scripts/
-├── sql/
-│   ├── 001-create-users-table.sql
-│   ├── 002-add-indexes.sql
-│   └── 003-query-users.sql
-└── README.md
-```
-
-Set `.env`: `GITHUB_REPO=org/sql-scripts` and `GITHUB_SQL_FOLDER=sql/`
-
-**Option B: Folder in Existing Repository** (e.g., Apollo cluster migrations)
-
-If you have migrations in your main app repo:
-
-```
-my-app-repo/
-├── src/
-├── migrations/
-│   └── sql/
-│       ├── 001-create-tables.sql
-│       └── 002-add-indexes.sql
-└── package.json
-```
-
-Set `.env`: `GITHUB_REPO=org/my-app-repo` and `GITHUB_SQL_FOLDER=migrations/sql/`
-
-The app will only watch and process SQL files in the specified folder.
-
-Each SQL file should include metadata in comments:
-
-```sql
--- Author: john@example.com
--- Purpose: Query all active users
--- TargetDatabase: staging
--- Date: 2025-12-03
--- DirectProd (optional - allows direct production execution without staging)
-
-SELECT * FROM users WHERE active = true ORDER BY created_at DESC;
-```
-
-**Note:** The `-- TargetDatabase:` comment is optional and defaults to `staging`. The staging-first workflow is enforced by the app, not by folder structure.
-
-### 5. Configure GitHub Webhook
-
-1. Go to your GitHub repository settings
-2. Navigate to **Webhooks** → **Add webhook**
-3. Set the **Payload URL** to: `https://your-domain.com/api/webhook/github`
-4. Set **Content type** to: `application/json`
-5. Set the **Secret** to match your `GITHUB_WEBHOOK_SECRET`
-6. Select **Let me select individual events** and choose: **Pull requests**
-7. Ensure **Active** is checked
-8. Click **Add webhook**
-
-### 6. Start the Development Server
-
-```bash
+# Start development server
 yarn dev
 ```
 
-The app will be available at `http://localhost:3000`
+Visit `http://localhost:3000`
 
-### 7. Build for Production
+## Features
 
-```bash
-yarn build
-yarn start
-```
+- ✅ Peer review via GitHub PRs (requires 2+ approvals)
+- ✅ Staging-first workflow (must run in staging before production)
+- ✅ Full audit trail with user tracking
+- ✅ Result capture for SELECT queries
+- ✅ Auto-sync from GitHub webhooks
+- ✅ GitHub OAuth for user identification
 
-## Usage Workflow
+## Setup
 
-### 1. Create SQL Script
+### Prerequisites
 
-Create a new `.sql` file in your `sql/` folder:
+- Node.js 20+
+- PostgreSQL installed and running
+- GitHub account
+
+### Quick Setup
+
+Run `yarn setup` to get started. This will:
+
+1. Create PostgreSQL databases (audit, staging, production)
+2. Generate `.env` file template
+3. Generate webhook and session secrets
+4. Show instructions for GitHub token and webhook setup
+
+### Manual Setup Steps
+
+If you prefer manual setup:
+
+1. **Create databases**: `yarn setup:db` (or create manually)
+2. **Generate .env**: `yarn setup:env` (then edit with your values)
+3. **Generate secrets**: `yarn setup:secrets`
+
+### GitHub Configuration
+
+#### Personal Access Token
+
+1. Go to GitHub → Settings → Developer settings → Personal access tokens
+2. Generate token with `repo` scope
+3. Add to `.env` as `GITHUB_TOKEN`
+
+#### Webhook Setup
+
+**For Local Development (using ngrok):**
+
+1. Install ngrok: https://ngrok.com/download
+2. Start your app: `yarn dev`
+3. Start ngrok in another terminal: `ngrok http 3000`
+4. Copy the HTTPS URL (e.g., `https://abc123.ngrok.io`)
+5. Add webhook to GitHub:
+   - Go to your repo → Settings → Webhooks → Add webhook
+   - **Payload URL**: `https://abc123.ngrok.io/api/webhook/github`
+   - **Content type**: `application/json`
+   - **Secret**: Use value from `GITHUB_WEBHOOK_SECRET` in `.env`
+   - **Events**: Select "Let me select individual events" → Check only "Pull requests"
+   - Click "Add webhook"
+6. Keep ngrok running while testing webhooks locally
+
+**For Production:**
+
+1. Go to your repo → Settings → Webhooks → Add webhook
+2. **Payload URL**: `https://your-domain.com/api/webhook/github`
+3. **Content type**: `application/json`
+4. **Secret**: Use value from `GITHUB_WEBHOOK_SECRET` in `.env`
+5. **Events**: Select "Let me select individual events" → Check only "Pull requests"
+6. Click "Add webhook"
+
+## Usage
+
+1. **Create SQL script** in your GitHub repo's `sql/` folder (or folder specified in `GITHUB_SQL_FOLDER`)
+2. **Create PR** and get 2+ approvals
+3. **Merge PR** - script appears in dashboard automatically
+4. **Execute on Staging** first
+5. **Execute on Production** after successful staging run
+
+### SQL Script Format
 
 ```sql
--- Author: jane@example.com
--- Purpose: Add new feature flag
+-- Author: user@example.com
+-- Purpose: Description
 -- TargetDatabase: staging
--- Date: 2025-12-03
+-- DirectProd (optional - bypasses staging requirement)
 
-INSERT INTO feature_flags (name, enabled) VALUES ('new_feature', false);
+SELECT * FROM users;
 ```
 
-**Staging-First Workflow:**
-- All scripts run in staging first
-- After successful staging execution, they can be promoted to production
-- Add `-- DirectProd` comment to bypass staging (use sparingly)
+**Note**: The `-- DirectProd` flag allows a script to run directly on production without staging execution.
 
-### 2. Create Pull Request
+## Configuration
 
-1. Create a new branch
-2. Add your SQL file
-3. Commit and push
-4. Create a Pull Request
-5. Request reviews from 2+ team members
+Edit `.env` file:
 
-### 3. Get Approvals
+```env
+# Databases
+AUDIT_DB_URL=postgresql://user:pass@localhost:5432/audit_db
+STAGING_DB_URL=postgresql://user:pass@localhost:5432/staging_db
+PROD_DB_URL=postgresql://user:pass@localhost:5432/prod_db
 
-Have at least 2 team members review and approve your PR. They should verify:
-- SQL syntax is correct
-- The script is safe to run
-- Target database is appropriate
-- Rollback plan exists (if needed)
+# GitHub
+GITHUB_TOKEN=ghp_your_token
+GITHUB_REPO=org/repo-name
+GITHUB_SQL_FOLDER=sql/
+GITHUB_WEBHOOK_SECRET=generated_secret
 
-### 4. Merge PR
+# Optional: GitHub OAuth
+GITHUB_OAUTH_CLIENT_ID=your_client_id
+GITHUB_OAUTH_CLIENT_SECRET=your_client_secret
+GITHUB_OAUTH_CALLBACK_URL=http://localhost:3000/auth/github/callback
 
-Once approved, merge the PR to main. The webhook will automatically:
-- Detect the merged PR
-- Verify it has enough approvals
-- Extract SQL files
-- Add them to the approved scripts list
-
-### 5. Execute via Web UI
-
-**Staging First:**
-1. Navigate to the web interface (auto-refreshes every 30 seconds)
-2. Find your script in "Pending Staging Execution" section
-3. Click **View Details**
-4. Click **Execute on Staging**
-5. Enter your name/email and confirm
-6. View results
-
-**Then Production:**
-1. Script moves to "Ready for Production" section
-2. Click **Execute on Production**
-3. Enter your name/email and confirm
-4. Script moves to "Completed" section
-
-**For SELECT queries:**
-- Results are captured and displayed in execution history
-- Click "Show (X rows)" to view returned data
-
-### 6. Check Audit Log
-
-Navigate to **Execution History** to see:
-- Who executed the script
-- Which database (staging/production)
-- When it was executed
-- How many rows were affected
-- Execution time
-- Query results (for SELECT queries)
-- Any errors
-
-## API Endpoints
-
-### `POST /api/webhook/github`
-
-GitHub webhook endpoint that processes merged PRs.
-
-**Headers:**
-- `x-hub-signature-256`: GitHub webhook signature
-
-**Response:**
-```json
-{
-  "message": "Webhook processed successfully",
-  "prNumber": 42,
-  "approvers": ["user1", "user2"],
-  "processedFiles": [...]
-}
+# Session
+SESSION_SECRET=generated_secret
+MIN_APPROVALS=2
 ```
 
-## Database Schema
+## Scripts
 
-### `approved_scripts`
-
-Stores approved SQL scripts from GitHub PRs with execution tracking.
-
-```sql
-CREATE TABLE approved_scripts (
-  id SERIAL PRIMARY KEY,
-  script_name VARCHAR(255) UNIQUE NOT NULL,
-  script_content TEXT NOT NULL,
-  target_database VARCHAR(50) NOT NULL,
-  github_pr_url VARCHAR(500),
-  approvers JSONB,
-  approved_at TIMESTAMP DEFAULT NOW(),
-  staging_executed BOOLEAN DEFAULT false,
-  staging_executed_at TIMESTAMP,
-  production_executed BOOLEAN DEFAULT false,
-  production_executed_at TIMESTAMP,
-  direct_prod BOOLEAN DEFAULT false
-);
-```
-
-### `sql_execution_log`
-
-Immutable audit log of all SQL executions with result capture.
-
-```sql
-CREATE TABLE sql_execution_log (
-  id SERIAL PRIMARY KEY,
-  script_name VARCHAR(255) NOT NULL,
-  script_content TEXT NOT NULL,
-  executed_by VARCHAR(255) NOT NULL,
-  executed_at TIMESTAMP DEFAULT NOW(),
-  target_database VARCHAR(50) NOT NULL,
-  status VARCHAR(50) NOT NULL,
-  rows_affected INTEGER,
-  error_message TEXT,
-  execution_time_ms INTEGER,
-  github_pr_url VARCHAR(500),
-  approvers JSONB,
-  result_data JSONB
-);
-```
-
-## Security Considerations
-
-1. **Database Credentials**: Store in environment variables, never commit to Git
-2. **Webhook Secret**: Use a strong, random secret for GitHub webhooks
-3. **Minimum Approvals**: Set to at least 2 for production scripts
-4. **Audit Logging**: All executions are logged and immutable
-5. **Connection Pools**: Separate pools for staging/production prevent mistakes
-6. **GitHub Token**: Use a token with minimal required permissions
+- `yarn dev` - Start development server
+- `yarn build` - Build for production
+- `yarn start` - Start production server
+- `yarn setup` - Run full setup wizard
+- `yarn setup:db` - Create databases only
+- `yarn setup:env` - Generate .env file only
+- `yarn setup:secrets` - Generate secrets only
 
 ## Troubleshooting
 
-### Webhook not working
+**Database connection fails:**
+- Check PostgreSQL is running: `pg_isready`
+- Verify database URLs in `.env`
+- Ensure databases exist
 
-- Check webhook secret matches between GitHub and `.env`
-- Verify webhook URL is accessible from GitHub
-- Check webhook deliveries in GitHub settings for error messages
+**Webhook not working:**
+- Verify webhook secret matches
+- Check webhook deliveries in GitHub
+- Ensure URL is accessible (for local dev, keep ngrok running)
 
-### Database connection errors
-
-- Verify all database URLs are correct
-- Ensure databases exist and are accessible
-- Check firewall rules allow connections
-
-### Scripts not appearing
-
-- Wait up to 30 seconds (dashboard auto-refreshes)
-- Or click "🔄 Sync from GitHub" for immediate sync
-- Verify PR was merged (not just closed)
-- Check PR has enough approvals
-- Ensure SQL files end with `.sql` extension
-- Check server logs for webhook processing errors
+**Scripts not appearing:**
+- Wait 30 seconds (auto-refresh)
+- Click "Sync" button to manually sync
+- Verify PR was merged (not closed)
+- Check PR has required approvals
+- Ensure SQL files are in `GITHUB_SQL_FOLDER`
 
 ## Tech Stack
 
-- **Framework**: Remix (TypeScript)
-- **Runtime**: Node.js 18+
-- **Package Manager**: yarn
-- **Database**: PostgreSQL
-- **GitHub Integration**: @octokit/rest, @octokit/webhooks
+- React Router v7 (TypeScript)
+- PostgreSQL
+- GitHub API (Octokit)
 
 ## License
 
 MIT
-
-## Contributing
-
-This is a POC. For production use, consider adding:
-- User authentication/authorization
-- Role-based access control
-- Script scheduling
-- Dry-run mode
-- Rollback scripts
-- Email notifications
-- Slack integration
-- More granular permissions
-

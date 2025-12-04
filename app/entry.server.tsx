@@ -8,6 +8,28 @@ import { validateConfig } from "./config.server";
 
 const ABORT_DELAY = 5_000;
 
+// Suppress console errors for harmless browser requests (.well-known, favicon)
+const originalConsoleError = console.error;
+console.error = (...args: any[]) => {
+  const message = args[0]?.toString() || "";
+  // Only suppress route matching errors for .well-known and favicon paths
+  if (message.includes("No route matches URL")) {
+    const urlMatch = message.match(/No route matches URL "([^"]+)"/);
+    if (urlMatch) {
+      const url = urlMatch[1];
+      if (
+        url.startsWith("/.well-known/") ||
+        url === "/favicon.ico" ||
+        url === "/favicon"
+      ) {
+        return; // Suppress this specific error
+      }
+    }
+  }
+  // Pass through all other errors
+  originalConsoleError.apply(console, args);
+};
+
 // Initialize database on server start
 validateConfig();
 initializeSchema().then(() => testConnections());
@@ -18,9 +40,16 @@ export default function handleRequest(
   responseHeaders: Headers,
   remixContext: EntryContext
 ) {
-  // Handle .well-known requests (Chrome DevTools, etc.) - return 404 without logging
+  // Handle .well-known and favicon requests - return 404 silently
+  // This must happen BEFORE React Router processes the request to prevent error logging
   const url = new URL(request.url);
-  if (url.pathname.startsWith("/.well-known/")) {
+  const pathname = url.pathname;
+  if (
+    pathname.startsWith("/.well-known/") ||
+    pathname === "/favicon.ico" ||
+    pathname === "/favicon"
+  ) {
+    // Return 404 without going through React Router to prevent error logging
     return new Response(null, { status: 404 });
   }
 
@@ -50,9 +79,14 @@ export default function handleRequest(
         },
         onError(error: unknown) {
           responseStatusCode = 500;
-          // Suppress errors for .well-known requests (Chrome DevTools, etc.)
+          // Suppress errors for .well-known and favicon requests
           const url = new URL(request.url);
-          if (url.pathname.startsWith("/.well-known/")) {
+          const pathname = url.pathname;
+          if (
+            pathname.startsWith("/.well-known/") ||
+            pathname === "/favicon.ico" ||
+            pathname === "/favicon"
+          ) {
             return; // Don't log these errors
           }
           if (shellRendered) {

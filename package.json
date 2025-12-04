@@ -9,7 +9,11 @@
     "build": "react-router build",
     "dev": "react-router dev",
     "start": "react-router-serve build/server/index.js",
-    "typecheck": "react-router typegen && tsc"
+    "typecheck": "react-router typegen && tsc",
+    "setup": "node scripts/setup.js",
+    "setup:db": "node scripts/setup-db.js",
+    "setup:env": "node scripts/setup-env.js",
+    "setup:secrets": "node scripts/setup-secrets.js"
   },
   "dependencies": {
     "@octokit/auth-oauth-app": "^9.0.3",

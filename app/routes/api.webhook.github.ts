@@ -23,14 +23,9 @@ export async function action({ request }: ActionFunctionArgs) {
   // Get the raw body
   const payload = await request.text();
 
-  console.log("[Webhook] Received webhook request");
-  console.log("[Webhook] Signature present:", !!signature);
-
   // Verify the webhook signature
   if (!verifyWebhookSignature(payload, signature)) {
-    console.error(
-      "[Webhook] Invalid signature - webhook secret may be mismatched"
-    );
+    console.error("❌ [Webhook] Invalid signature");
     return json({ error: "Invalid signature" }, { status: 401 });
   }
 
@@ -39,36 +34,27 @@ export async function action({ request }: ActionFunctionArgs) {
   try {
     data = JSON.parse(payload);
   } catch (error) {
-    console.error("[Webhook] Failed to parse JSON:", error);
+    console.error("❌ [Webhook] Failed to parse JSON:", error);
     return json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  console.log("[Webhook] Event type:", data.action);
-  console.log("[Webhook] PR merged?", data.pull_request?.merged);
-  console.log("[Webhook] PR number:", data.pull_request?.number);
-
   // Only handle merged pull requests
   if (data.action !== "closed" || !data.pull_request?.merged) {
-    console.log("[Webhook] Ignoring - not a merged PR");
     return json({ message: "Not a merged PR, ignoring" }, { status: 200 });
   }
 
   const prNumber = data.pull_request.number;
   const prUrl = data.pull_request.html_url;
 
-  console.log(`Processing merged PR #${prNumber}`);
+  console.log(`📥 [Webhook] Processing merged PR #${prNumber}`);
 
   // Get PR approvers
   const approvers = await getPRApprovers(prNumber);
-  console.log(
-    `[Webhook] PR #${prNumber} has ${approvers.length} approvals (need ${config.minApprovals})`
-  );
-  console.log(`[Webhook] Approvers:`, approvers);
 
   // Check if PR has enough approvals
   if (approvers.length < config.minApprovals) {
     console.log(
-      `[Webhook] ❌ Insufficient approvals (${approvers.length}/${config.minApprovals})`
+      `   ⚠️  Insufficient approvals (${approvers.length}/${config.minApprovals})`
     );
     return json(
       {
@@ -80,11 +66,6 @@ export async function action({ request }: ActionFunctionArgs) {
 
   // Get files changed in the PR
   const files = await getPRFiles(prNumber);
-  console.log(`[Webhook] Found ${files.length} files in PR`);
-  console.log(
-    `[Webhook] Files:`,
-    files.map((f) => `${f.filename} (${f.status})`)
-  );
 
   // Filter for SQL files in specified folder (or entire repo if folder not set)
   const sqlFolder = config.github.sqlFolder;
@@ -101,13 +82,9 @@ export async function action({ request }: ActionFunctionArgs) {
     return true;
   });
 
-  const folderInfo = sqlFolder ? ` in folder '${sqlFolder}'` : "";
-  console.log(
-    `[Webhook] Found ${sqlFiles.length} SQL file(s)${folderInfo} after filtering`
-  );
-
   if (sqlFiles.length === 0) {
-    console.log(`[Webhook] ❌ No SQL files found in PR${folderInfo}`);
+    const folderInfo = sqlFolder ? ` in folder '${sqlFolder}'` : "";
+    console.log(`   ⚠️  No SQL files found${folderInfo}`);
     return json(
       { message: `No SQL files found in PR${folderInfo}` },
       { status: 200 }
@@ -117,13 +94,13 @@ export async function action({ request }: ActionFunctionArgs) {
   // Process each SQL file
   const results = [];
   for (const file of sqlFiles) {
-    console.log(`[Webhook] Processing file: ${file.filename}`);
+    const scriptName = file.filename.split("/").pop() || file.filename;
 
     // Fetch the file content first to parse metadata
     const content = await fetchScriptFromGitHub(file.filename);
 
     if (!content) {
-      console.log(`[Webhook] ❌ Failed to fetch content for ${file.filename}`);
+      console.log(`   ❌ Failed to fetch: ${scriptName}`);
       continue;
     }
 
@@ -134,13 +111,9 @@ export async function action({ request }: ActionFunctionArgs) {
     // Extract target database (defaults to staging for new workflow)
     const targetDb = extractTargetDatabase(file.filename, content) || "staging";
 
-    console.log(
-      `[Webhook] Target database: ${targetDb}, DirectProd: ${directProd}`
-    );
-
     // Add to approved scripts
     const success = await addApprovedScript({
-      scriptName: file.filename.split("/").pop() || file.filename,
+      scriptName,
       scriptContent: content,
       targetDatabase: targetDb,
       githubPrUrl: prUrl,
@@ -149,9 +122,10 @@ export async function action({ request }: ActionFunctionArgs) {
     });
 
     if (success) {
-      console.log(`[Webhook] ✓ Successfully added script: ${file.filename}`);
+      const directProdFlag = directProd ? " (DirectProd)" : "";
+      console.log(`   ✓ Added: ${scriptName} → ${targetDb}${directProdFlag}`);
     } else {
-      console.log(`[Webhook] ❌ Failed to add script: ${file.filename}`);
+      console.log(`   ❌ Failed to add: ${scriptName}`);
     }
 
     results.push({

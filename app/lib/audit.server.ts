@@ -37,9 +37,9 @@ export async function logExecution(data: LogExecutionData): Promise<void> {
         data.resultData ? JSON.stringify(data.resultData) : null,
       ]
     );
-    console.log(`✓ Logged execution of ${data.scriptName}`);
+    // Logged silently - execution details are in database
   } catch (error) {
-    console.error("Error logging execution:", error);
+    console.error(`❌ Error logging execution of ${data.scriptName}:`, error);
   }
 }
 
@@ -73,10 +73,10 @@ export async function addApprovedScript(data: {
         data.directProd || false,
       ]
     );
-    console.log(`✓ Added approved script: ${data.scriptName}`);
+    // Script added - logged by caller
     return true;
   } catch (error) {
-    console.error("Error adding approved script:", error);
+    console.error(`❌ Error adding approved script ${data.scriptName}:`, error);
     return false;
   }
 }

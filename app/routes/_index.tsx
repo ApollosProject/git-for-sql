@@ -1,8 +1,8 @@
 import { redirect } from "react-router";
 import { json } from "~/lib/json.server";
-import { useLoaderData, useRevalidator } from "react-router";
-import { useEffect } from "react";
-import type { LoaderFunctionArgs } from "react-router";
+import { useLoaderData, useRevalidator, useFetcher } from "react-router";
+import { useEffect, useState } from "react";
+import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import {
   MagnifyingGlass,
   Clock,
@@ -14,14 +14,57 @@ import {
   ArrowClockwise,
   Lightning,
 } from "phosphor-react";
-import {
-  getApprovedScripts,
-  getExistingScriptNames,
-  getScriptExecutionHistory,
-} from "~/lib/db.server";
+import { getApprovedScripts, getScriptExecutionHistory } from "~/lib/db.server";
 import type { ApprovedScript } from "~/lib/types";
 import { getUserFromSession } from "~/lib/auth.server";
 import { getOpenPRsWithSQL } from "~/lib/github.server";
+
+type LoaderData = {
+  pending: Array<
+    ApprovedScript & {
+      executionCount: number;
+      lastExecution: any;
+      lastExecutedBy: string | null;
+      lastExecutedAt: string | null;
+      hasErrors: boolean;
+      workflowState: "pending" | "ready" | "completed";
+    }
+  >;
+  readyForProd: Array<
+    ApprovedScript & {
+      executionCount: number;
+      lastExecution: any;
+      lastExecutedBy: string | null;
+      lastExecutedAt: string | null;
+      hasErrors: boolean;
+      workflowState: "pending" | "ready" | "completed";
+    }
+  >;
+  completed: Array<
+    ApprovedScript & {
+      executionCount: number;
+      lastExecution: any;
+      lastExecutedBy: string | null;
+      lastExecutedAt: string | null;
+      hasErrors: boolean;
+      workflowState: "pending" | "ready" | "completed";
+    }
+  >;
+  openPRs: Array<{
+    prNumber: number;
+    title: string;
+    url: string;
+    author: string;
+    createdAt: string;
+    sqlFiles: Array<{ filename: string; status: string }>;
+  }>;
+  user: {
+    username: string;
+    name?: string;
+    email?: string;
+    avatar?: string;
+  } | null;
+};
 
 export async function loader({ request }: LoaderFunctionArgs) {
   // Require authentication
@@ -100,11 +143,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
   });
 
   // Group scripts by workflow state
-  const pending = scriptsWithStats.filter((s) => s.workflowState === "pending");
-  const readyForProd = scriptsWithStats.filter(
+  const pending: typeof scriptsWithStats = scriptsWithStats.filter(
+    (s) => s.workflowState === "pending"
+  );
+  const readyForProd: typeof scriptsWithStats = scriptsWithStats.filter(
     (s) => s.workflowState === "ready"
   );
-  const completed = scriptsWithStats.filter(
+  const completed: typeof scriptsWithStats = scriptsWithStats.filter(
     (s) => s.workflowState === "completed"
   );
 
@@ -138,7 +183,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 export default function Index() {
   const { pending, readyForProd, completed, openPRs, user } =
-    useLoaderData<typeof loader>();
+    useLoaderData<LoaderData>();
   const revalidator = useRevalidator();
 
   const totalScripts = pending.length + readyForProd.length + completed.length;
@@ -152,19 +197,82 @@ export default function Index() {
     return () => clearInterval(interval);
   }, [revalidator]);
 
+  const syncFetcher = useFetcher();
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [isProcessingSync, setIsProcessingSync] = useState(false);
+
+  const handleSync = () => {
+    if (syncFetcher.state === "idle" && !isProcessingSync) {
+      setIsProcessingSync(true);
+      syncFetcher.submit({}, { method: "POST", action: "/api/sync" });
+    }
+  };
+
+  useEffect(() => {
+    // Only process if we have new data and we're not already processing
+    if (syncFetcher.data && syncFetcher.state === "idle" && isProcessingSync) {
+      setIsProcessingSync(false);
+
+      if (syncFetcher.data.success) {
+        const stats = syncFetcher.data.stats;
+        setSyncMessage(
+          `Synced ${stats.synced} script(s), skipped ${stats.skipped}, ${stats.errors} error(s)`
+        );
+        // Refresh data after a short delay to allow the sync to complete
+        setTimeout(() => {
+          revalidator.revalidate();
+        }, 500);
+        setTimeout(() => setSyncMessage(null), 5000);
+      } else {
+        setSyncMessage("Sync failed. Please try again.");
+        setTimeout(() => setSyncMessage(null), 5000);
+      }
+    }
+  }, [syncFetcher.data, syncFetcher.state, isProcessingSync, revalidator]);
+
   return (
     <div>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2">Approved SQL Scripts</h2>
-        <p className="text-neutral-500 text-sm">
-          All scripts must be executed in staging first, then can be promoted to
-          production. Add{" "}
-          <code className="bg-warning-100 text-warning-900 px-2 py-1 rounded text-xs font-mono font-semibold">
-            -- DirectProd
-          </code>{" "}
-          in script comments to bypass staging requirement.
-        </p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h2 className="text-2xl font-bold mb-2">Approved SQL Scripts</h2>
+          <p className="text-neutral-500 text-sm">
+            All scripts must be executed in staging first, then can be promoted
+            to production. Add{" "}
+            <code className="bg-warning-100 text-warning-900 px-2 py-1 rounded text-xs font-mono font-semibold">
+              -- DirectProd
+            </code>{" "}
+            in script comments to bypass staging requirement.
+          </p>
+        </div>
+        <syncFetcher.Form method="post" action="/api/sync">
+          <button
+            type="submit"
+            disabled={syncFetcher.state === "submitting"}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm text-neutral-600 hover:text-neutral-900 border border-neutral-300 hover:border-neutral-400 rounded-lg bg-white hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+          >
+            <ArrowClockwise
+              size={16}
+              weight="regular"
+              className={
+                syncFetcher.state === "submitting" ? "animate-spin" : ""
+              }
+            />
+            {syncFetcher.state === "submitting" ? "Syncing..." : "Sync"}
+          </button>
+        </syncFetcher.Form>
       </div>
+
+      {syncMessage && (
+        <div
+          className={`mb-4 p-3 rounded-lg ${
+            syncMessage.includes("failed")
+              ? "bg-error-100 text-error-900"
+              : "bg-success-100 text-success-900"
+          }`}
+        >
+          {syncMessage}
+        </div>
+      )}
 
       {totalScripts === 0 && openPRs.length === 0 ? (
         <div className="bg-white border border-neutral-200 rounded-lg p-6">

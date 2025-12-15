@@ -57,4 +57,24 @@ describe('needsTransaction', () => {
     `;
     expect(needsTransaction(sql)).toBe(true);
   });
+
+  test('already wrapped in transaction returns false', () => {
+    const sql = `
+      BEGIN;
+      UPDATE users SET active = true;
+      UPDATE users SET last_login = NOW();
+      COMMIT;
+    `;
+    expect(needsTransaction(sql)).toBe(false);
+  });
+
+  test('already wrapped with BEGIN and COMMIT returns false', () => {
+    const sql = 'BEGIN; INSERT INTO users (name) VALUES (\'test\'); COMMIT;';
+    expect(needsTransaction(sql)).toBe(false);
+  });
+
+  test('case insensitive BEGIN/COMMIT detection', () => {
+    const sql = 'begin; SELECT 1; SELECT 2; commit;';
+    expect(needsTransaction(sql)).toBe(false);
+  });
 });

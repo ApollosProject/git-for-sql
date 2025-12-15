@@ -4,9 +4,20 @@ import type { ExecutionResult, ApprovedScript, ExecutionLog } from "./types";
 
 // Initialize connection pools
 export const pools = {
-  staging: new Pool({ connectionString: config.databases.staging }),
-  production: new Pool({ connectionString: config.databases.production }),
-  audit: new Pool({ connectionString: config.databases.audit }),
+  staging: new Pool({
+    connectionString: config.databases.staging,
+    ssl: config.databases.staging ? { rejectUnauthorized: false } : undefined,
+  }),
+  production: new Pool({
+    connectionString: config.databases.production,
+    ssl: config.databases.production
+      ? { rejectUnauthorized: false }
+      : undefined,
+  }),
+  audit: new Pool({
+    connectionString: config.databases.audit,
+    ssl: config.databases.audit ? { rejectUnauthorized: false } : undefined,
+  }),
 };
 
 // Test database connections on startup
@@ -29,6 +40,20 @@ export async function testConnections() {
   }
 }
 
+// Determine if SQL needs to be wrapped in a transaction
+export function needsTransaction(sql: string): boolean {
+  const trimmed = sql.trim().toUpperCase();
+
+  // Check if already wrapped in a transaction
+  if (trimmed.startsWith("BEGIN") && trimmed.includes("COMMIT")) {
+    return false;
+  }
+
+  // Count semicolons to detect multiple statements
+  const semicolons = (sql.match(/;/g) || []).length;
+  return semicolons >= 2;
+}
+
 // Execute SQL against target database
 export async function executeSQL(
   target: "staging" | "production",
@@ -42,7 +67,24 @@ export async function executeSQL(
       throw new Error(`No connection pool available for ${target} database`);
     }
 
-    const result = await pool.query(sql);
+    const useTransaction = needsTransaction(sql);
+    let result;
+
+    if (useTransaction) {
+      // Multi-statement: use transaction
+      await pool.query("BEGIN");
+      try {
+        result = await pool.query(sql);
+        await pool.query("COMMIT");
+      } catch (error) {
+        await pool.query("ROLLBACK");
+        throw error; // Re-throw to hit the outer catch block
+      }
+    } else {
+      // Single statement: no transaction needed
+      result = await pool.query(sql);
+    }
+
     const executionTime = Date.now() - start;
 
     // Check if this is a SELECT query (has result rows)

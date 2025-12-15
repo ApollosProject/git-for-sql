@@ -14,7 +14,10 @@
     "setup:db": "node scripts/setup-db.js",
     "setup:env": "node scripts/setup-env.js",
     "setup:secrets": "node scripts/setup-secrets.js",
-    "db:migrate": "node scripts/migrate-db.js"
+    "db:migrate": "node scripts/migrate-db.js",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@octokit/auth-oauth-app": "^9.0.3",
@@ -38,9 +41,11 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "@vitest/coverage-v8": "^4.0.15",
     "typescript": "^5.9.3",
     "vite": "^7.2.6",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^4.0.15"
   },
   "engines": {
     "node": ">=20.0.0"

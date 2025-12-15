@@ -4,9 +4,18 @@ import type { ExecutionResult, ApprovedScript, ExecutionLog } from "./types";
 
 // Initialize connection pools
 export const pools = {
-  staging: new Pool({ connectionString: config.databases.staging }),
-  production: new Pool({ connectionString: config.databases.production }),
-  audit: new Pool({ connectionString: config.databases.audit }),
+  staging: new Pool({
+    connectionString: config.databases.staging,
+    ssl: config.databases.staging ? { rejectUnauthorized: false } : undefined,
+  }),
+  production: new Pool({
+    connectionString: config.databases.production,
+    ssl: config.databases.production ? { rejectUnauthorized: false } : undefined,
+  }),
+  audit: new Pool({
+    connectionString: config.databases.audit,
+    ssl: config.databases.audit ? { rejectUnauthorized: false } : undefined,
+  }),
 };
 
 // Test database connections on startup
@@ -53,12 +62,12 @@ export async function executeSQL(
 
     if (useTransaction) {
       // Multi-statement: use transaction
-      await pool.query('BEGIN');
+      await pool.query("BEGIN");
       try {
         result = await pool.query(sql);
-        await pool.query('COMMIT');
+        await pool.query("COMMIT");
       } catch (error) {
-        await pool.query('ROLLBACK');
+        await pool.query("ROLLBACK");
         throw error; // Re-throw to hit the outer catch block
       }
     } else {

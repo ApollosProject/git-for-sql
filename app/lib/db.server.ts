@@ -10,7 +10,9 @@ export const pools = {
   }),
   production: new Pool({
     connectionString: config.databases.production,
-    ssl: config.databases.production ? { rejectUnauthorized: false } : undefined,
+    ssl: config.databases.production
+      ? { rejectUnauthorized: false }
+      : undefined,
   }),
   audit: new Pool({
     connectionString: config.databases.audit,
@@ -41,12 +43,12 @@ export async function testConnections() {
 // Determine if SQL needs to be wrapped in a transaction
 export function needsTransaction(sql: string): boolean {
   const trimmed = sql.trim().toUpperCase();
-  
+
   // Check if already wrapped in a transaction
-  if (trimmed.startsWith('BEGIN') && trimmed.includes('COMMIT')) {
+  if (trimmed.startsWith("BEGIN") && trimmed.includes("COMMIT")) {
     return false;
   }
-  
+
   // Count semicolons to detect multiple statements
   const semicolons = (sql.match(/;/g) || []).length;
   return semicolons >= 2;

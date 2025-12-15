@@ -13,7 +13,8 @@
     "setup": "node scripts/setup.js",
     "setup:db": "node scripts/setup-db.js",
     "setup:env": "node scripts/setup-env.js",
-    "setup:secrets": "node scripts/setup-secrets.js"
+    "setup:secrets": "node scripts/setup-secrets.js",
+    "db:migrate": "node scripts/migrate-db.js"
   },
   "dependencies": {
     "@octokit/auth-oauth-app": "^9.0.3",

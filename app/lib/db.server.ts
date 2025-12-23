@@ -2,21 +2,34 @@ import { Pool } from "pg";
 import { config } from "~/config.server";
 import type { ExecutionResult, ApprovedScript, ExecutionLog } from "./types";
 
+// Helper to determine if SSL should be used
+function getSSLConfig(connectionString: string | undefined) {
+  if (!connectionString) return undefined;
+
+  // Disable SSL for local databases
+  const isLocal =
+    connectionString.includes("localhost") ||
+    connectionString.includes("127.0.0.1");
+
+  if (isLocal) return false;
+
+  // Enable SSL for remote databases (like Heroku)
+  return { rejectUnauthorized: false };
+}
+
 // Initialize connection pools
 export const pools = {
   staging: new Pool({
     connectionString: config.databases.staging,
-    ssl: config.databases.staging ? { rejectUnauthorized: false } : undefined,
+    ssl: getSSLConfig(config.databases.staging),
   }),
   production: new Pool({
     connectionString: config.databases.production,
-    ssl: config.databases.production
-      ? { rejectUnauthorized: false }
-      : undefined,
+    ssl: getSSLConfig(config.databases.production),
   }),
   audit: new Pool({
     connectionString: config.databases.audit,
-    ssl: config.databases.audit ? { rejectUnauthorized: false } : undefined,
+    ssl: getSSLConfig(config.databases.audit),
   }),
 };
 

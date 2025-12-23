@@ -54,6 +54,30 @@ export function needsTransaction(sql: string): boolean {
   return semicolons >= 2;
 }
 
+// Helper function to clean SQL and detect query characteristics
+export function analyzeSQL(sql: string): {
+  isSelectQuery: boolean;
+  hasReturning: boolean;
+  shouldCaptureRows: boolean;
+} {
+  // Remove comments and whitespace to detect query type properly
+  const sqlClean = sql
+    .replace(/--.*$/gm, "") // Remove single-line comments
+    .replace(/\/\*[\s\S]*?\*\//g, "") // Remove multi-line comments
+    .trim()
+    .toUpperCase();
+
+  const isSelectQuery = sqlClean.startsWith("SELECT");
+  const hasReturning = sqlClean.includes("RETURNING");
+  const shouldCaptureRows = isSelectQuery || hasReturning;
+
+  return {
+    isSelectQuery,
+    hasReturning,
+    shouldCaptureRows,
+  };
+}
+
 // Execute SQL against target database
 export async function executeSQL(
   target: "staging" | "production",
@@ -87,18 +111,11 @@ export async function executeSQL(
 
     const executionTime = Date.now() - start;
 
-    // Check if this is a SELECT query (has result rows)
-    // Remove comments and whitespace to detect SELECT queries properly
-    const sqlClean = sql
-      .replace(/--.*$/gm, "") // Remove single-line comments
-      .replace(/\/\*[\s\S]*?\*\//g, "") // Remove multi-line comments
-      .trim()
-      .toUpperCase();
-    const isSelectQuery = sqlClean.startsWith("SELECT");
-    const resultRows =
-      isSelectQuery && result.rows && result.rows.length > 0
-        ? result.rows
-        : undefined;
+    // Analyze SQL to determine if we should capture result rows
+    const { shouldCaptureRows: shouldCapture } = analyzeSQL(sql);
+    const shouldCaptureRows =
+      shouldCapture && result.rows && result.rows.length > 0;
+    const resultRows = shouldCaptureRows ? result.rows : undefined;
 
     // Limit result rows to prevent storing huge result sets (max 100 rows)
     const limitedRows =
@@ -106,11 +123,9 @@ export async function executeSQL(
         ? resultRows.slice(0, 100)
         : resultRows;
 
-    // For SELECT queries, use rows.length; for DML/DDL, use rowCount
-    const rowsAffected = isSelectQuery
-      ? result.rows
-        ? result.rows.length
-        : 0
+    // For SELECT/RETURNING queries, use rows.length; for DML/DDL, use rowCount
+    const rowsAffected = shouldCaptureRows
+      ? result.rows.length
       : result.rowCount || 0;
 
     return {
